@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f4ede0;
+  --parchment: #e8dcc8;
+  --ink: #2c2416;
+  --muted: #6b5d4d;
+  --terracotta: #b85c38;
+  --rule: #d4c4a8;
+  --paper-deep: #ebe1d0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-parchment: var(--parchment);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-terracotta: var(--terracotta);
+  --color-rule: var(--rule);
+  --color-paper-deep: var(--paper-deep);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter);
+  --font-serif: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 12% -10%, rgb(184 92 56 / 0.07), transparent 46%),
+    radial-gradient(ellipse at 110% 0%, rgb(44 36 22 / 0.05), transparent 42%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  color: var(--ink);
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: rgb(184 92 56 / 0.22);
+}
+
+.prose-parchment {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.prose-parchment p {
+  margin: 0 0 1.25rem;
+}
+
+.prose-parchment h2,
+.prose-parchment h3 {
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 2rem 0 0.75rem;
+}
+
+.prose-parchment a {
+  color: var(--terracotta);
+}
+
+.prose-parchment ul,
+.prose-parchment ol {
+  margin: 0 0 1.25rem 1.25rem;
+}
+
+.prose-parchment code {
+  font-size: 0.9em;
+  background: rgb(44 36 22 / 0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+.prose-parchment pre {
+  overflow-x: auto;
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  padding: 1rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
 }

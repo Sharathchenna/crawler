@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Serwist
+public/sw*
+public/swe-worker*
+
+# Cloudflare
+.wrangler
+.dev.vars
+/dist/
+.vinext/

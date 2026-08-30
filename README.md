@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parchment
 
-## Getting Started
+A cream-paper PWA that finds the web’s better blogs. The Next.js app is the reading room. A Cloudflare Worker searches with TinyFish, pulls Hacker News favorites, fetches clean markdown, and keeps only the pieces that pass a quality gate.
 
-First, run the development server:
+## Develop
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun run db:migrate:local
+bun run dev:crawler   # Worker + D1 + Queue at http://127.0.0.1:8787
+bun run dev           # PWA at http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `worker/.dev.vars.example` to `worker/.dev.vars` and set `TINYFISH_API_KEY` (from [TinyFish API keys](https://agent.tinyfish.ai/api-keys)). Without a key, Hacker News discovery still runs; TinyFish search/fetch is skipped.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`CRAWLER_ORIGIN` defaults to `http://127.0.0.1:8787` (see `.env.example`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy the crawler
 
-## Learn More
+```bash
+bunx wrangler d1 create parchment
+# paste the database_id into worker/wrangler.jsonc
+bunx wrangler r2 bucket create parchment-posts
+bunx wrangler queues create parchment-fetch
+bun run db:migrate
+bunx wrangler secret put TINYFISH_API_KEY --config worker/wrangler.jsonc
+bun run deploy:crawler
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then set `CRAWLER_ORIGIN` to the Worker URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy the PWA to Cloudflare Workers with vinext (after `wrangler login` and creating the `VINEXT_KV_CACHE` namespace listed in root `wrangler.jsonc`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+bun run deploy:vinext
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Cron runs every six hours (`0 */6 * * *`). You can also `POST /api/discover` on the Worker to kick a run.

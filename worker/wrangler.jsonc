@@ -1,0 +1,49 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "parchment-crawler",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "workers_dev": true,
+  "preview_urls": true,
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+  "ai": { "binding": "AI" },
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "parchment-links" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "parchment",
+      "database_id": "20e51e9b-addd-4ca8-808e-5aeeee4dabb4",
+      "migrations_dir": "../shared/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "POSTS",
+      "bucket_name": "parchment-posts"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "FETCH_QUEUE",
+        "queue": "parchment-fetch"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "parchment-fetch",
+        "max_batch_size": 10,
+        "max_batch_timeout": 15,
+        "max_retries": 3
+      }
+    ]
+  }
+}

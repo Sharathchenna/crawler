@@ -1,69 +1,90 @@
-import Image from "next/image";
+import Link from "next/link";
+import { DiscoverButton } from "@/components/discover-button";
+import { PostList } from "@/components/post-list";
+import { SaveForm } from "@/components/save-form";
+import { SearchForm } from "@/components/search-form";
+import { listPosts } from "@/lib/posts";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+export default async function HomePage() {
+  const [yours, suggested] = await Promise.all([
+    listPosts({ origin: "saved", limit: 9 }),
+    listPosts({ origin: "suggested", limit: 9 }),
+  ]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8 sm:py-16">
+      <div className="max-w-2xl">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-terracotta">
+          A library of the open web
+        </p>
+        <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-[1.15] tracking-tight text-ink sm:text-5xl">
+          What you save, and what the crawler finds.
+        </h1>
+        <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
+          Two shelves. Yours is anything you paste — tweets, papers, blogs.
+          Suggested is what the crawler brings in from HN, arXiv, and the open
+          web.
+        </p>
+        <div className="mt-10">
+          <SearchForm />
+        </div>
+      </div>
+
+      <section className="mt-16">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Yours
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-muted">
+              Paste a URL you found interesting. Tweets, papers, anything.
+            </p>
+          </div>
+          <Link
+            href="/search?origin=saved"
+            className="text-xs font-medium uppercase tracking-[0.16em] text-terracotta no-underline"
+          >
+            See all
+          </Link>
+        </div>
+        <div className="mb-8 max-w-2xl">
+          <SaveForm />
+        </div>
+        <PostList
+          posts={yours}
+          empty="Nothing saved yet. Paste a tweet, paper, or any URL above."
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+      </section>
+
+      <section className="mt-20">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Suggested
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-muted">
+              HN favorites, new arXiv papers, and company blogs. Runs on a
+              schedule, or hit Find more.
+            </p>
+          </div>
+          <div className="flex items-center gap-5">
+            <DiscoverButton />
+            <Link
+              href="/search?origin=suggested"
+              className="text-xs font-medium uppercase tracking-[0.16em] text-terracotta no-underline"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              See all
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <PostList
+          posts={suggested}
+          empty="No suggestions yet. Start the crawler, then Find more."
+        />
+      </section>
+    </main>
   );
 }
