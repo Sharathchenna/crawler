@@ -1,38 +1,77 @@
 # Parchment
 
-A cream-paper PWA that finds the web’s better blogs. The Next.js app is the reading room. A Cloudflare Worker searches with TinyFish, pulls Hacker News favorites, fetches clean markdown, and keeps only the pieces that pass a quality gate.
+A cream-paper PWA that is a **link library**, not a reader. Cards open the original URL.
+
+Two shelves:
+
+- **Yours** — anything you paste (tweet, paper, blog, repo).
+- **Suggested** — what the crawler found in the last **7 days**: recent Hacker News, new arXiv papers, and company / personal longform via TinyFish. Ranked as a mix, not all-time HN classics.
+
+Live: [crawler.sharathchenna87.workers.dev](https://crawler.sharathchenna87.workers.dev) (Cloudflare Access) talking to [parchment-crawler](https://parchment-crawler.sharathchenna87.workers.dev).
+
+## How it is put together
+
+```
+Next.js PWA  ──HTTP──►  crawler Worker (local)
+     │
+     └──service binding──►  parchment-crawler (Cloudflare)
+                              D1 catalog · R2 bodies · fetch queue
+                              Vectorize + Workers AI embeddings
+                              TinyFish search/fetch · HN · arXiv
+```
+
+- **PWA** (`app/`, `components/`) — Next.js 16 App Router, Inter, cream `#F4EDE0`, Serwist PWA. Local: `bun run dev` (webpack). Production: vinext on a Worker named `crawler`.
+- **Crawler** (`worker/`) — Worker `parchment-crawler`. Cron `0 */6 * * *`. `POST /api/discover` kicks a run immediately (the **Find more** button).
+
+Local Next cannot import `cloudflare:workers`, so webpack aliases `@/lib/origin` to HTTP `fetch(CRAWLER_ORIGIN)`. The vinext build aliases the same module to `env.CRAWLER.fetch` (Worker-to-Worker on `*.workers.dev` does not work without that binding).
 
 ## Develop
 
+Needs [Bun](https://bun.sh) and two terminals.
+
 ```bash
 bun install
+cp .env.example .env.local          # CRAWLER_ORIGIN=http://127.0.0.1:8787
+cp worker/.dev.vars.example worker/.dev.vars
+# optional: TinyFish key in worker/.dev.vars — HN still runs without it
 bun run db:migrate:local
-bun run dev:crawler   # Worker + D1 + Queue at http://127.0.0.1:8787
-bun run dev           # PWA at http://localhost:3000
+bun run dev:crawler                 # http://127.0.0.1:8787
+bun run dev                         # http://localhost:3000
 ```
 
-Copy `worker/.dev.vars.example` to `worker/.dev.vars` and set `TINYFISH_API_KEY` (from [TinyFish API keys](https://agent.tinyfish.ai/api-keys)). Without a key, Hacker News discovery still runs; TinyFish search/fetch is skipped.
+Get a TinyFish key at [agent.tinyfish.ai/api-keys](https://agent.tinyfish.ai/api-keys). Without `TINYFISH_API_KEY`, discover still pulls HN (and arXiv when the feed is reachable).
 
-`CRAWLER_ORIGIN` defaults to `http://127.0.0.1:8787` (see `.env.example`).
+## Deploy
 
-## Deploy the crawler
+Already wired in this repo: D1 `parchment`, R2 `parchment-posts`, queue `parchment-fetch`, Vectorize `parchment-links`, KV `VINEXT_KV_CACHE`. After `wrangler login`:
 
 ```bash
-bunx wrangler d1 create parchment
-# paste the database_id into worker/wrangler.jsonc
-bunx wrangler r2 bucket create parchment-posts
-bunx wrangler queues create parchment-fetch
-bun run db:migrate
 bunx wrangler secret put TINYFISH_API_KEY --config worker/wrangler.jsonc
+bun run db:migrate
 bun run deploy:crawler
-```
-
-Then set `CRAWLER_ORIGIN` to the Worker URL.
-
-Deploy the PWA to Cloudflare Workers with vinext (after `wrangler login` and creating the `VINEXT_KV_CACHE` namespace listed in root `wrangler.jsonc`):
-
-```bash
+bun run build:vinext
 bun run deploy:vinext
 ```
 
-Cron runs every six hours (`0 */6 * * *`). You can also `POST /api/discover` on the Worker to kick a run.
+Root `wrangler.jsonc` sets `CRAWLER_ORIGIN` and the `CRAWLER` service binding to `parchment-crawler`. Do not skip `build:vinext` — `deploy:vinext` ships `dist/`.
+
+On a new Cloudflare account, create those resources first, paste IDs into `worker/wrangler.jsonc` and `wrangler.jsonc`, then deploy crawler before the PWA.
+
+## Discover and search
+
+Discover (cron or **Find more**) prunes Suggested older than 7 days, then enqueues HN from the last week, arXiv, and TinyFish queries over company blogs and essays. Tweets are stored as links only (no X API).
+
+Search tries Vectorize (`@cf/baai/bge-base-en-v1.5`, 768d) and falls back to SQL `LIKE` if AI / Vectorize is missing.
+
+Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `GET /health`.
+
+## Layout
+
+```
+app/            PWA routes, PWA icons, service worker
+components/     shelves, save/search, sidebar
+lib/            crawler client (HTTP vs service binding)
+shared/         types, URL classify, D1 migrations, 7-day window
+worker/         discover, ingest, D1, embeddings
+wrangler.jsonc  PWA Worker
+```
