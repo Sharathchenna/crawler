@@ -1,4 +1,5 @@
 import { classifyUrl, tweetTitleFromUrl } from "../../shared/classify";
+import { fetchTweetPreview, tweetEmbedImageUrl } from "../../shared/tweet";
 import type { ContentType, SourceKind } from "../../shared/types";
 import { findByCanonical, insertPost, markJob, upsertSource } from "./db";
 import { indexPost } from "./embeddings";
@@ -38,10 +39,18 @@ export async function saveLink(
   const existing = await findByCanonical(env.DB, canonical);
   const contentType = input.contentType ?? classifyUrl(canonical, input.discoveredVia);
   const site = hostnameOf(canonical);
+  const tweet =
+    contentType === "tweet" ? await fetchTweetPreview(canonical) : null;
   const title =
     input.title?.trim() ||
-    (contentType === "tweet" ? tweetTitleFromUrl(canonical) : site);
-  const excerpt = input.excerpt?.trim() || canonical;
+    (tweet
+      ? `${tweet.name} (@${tweet.handle})`
+      : contentType === "tweet"
+        ? tweetTitleFromUrl(canonical)
+        : site);
+  const excerpt =
+    (contentType === "tweet" && tweet?.text ? tweet.text : input.excerpt?.trim()) ||
+    canonical;
   const sourceId = await upsertSource(env.DB, site, sourceKindFor(contentType));
 
   const id = await insertPost(env.DB, {
@@ -53,11 +62,15 @@ export async function saveLink(
     site,
     topic: guessTopic(title, excerpt),
     contentType,
-    publishedAt: input.publishedAt ?? null,
+    publishedAt: tweet?.publishedAt ?? input.publishedAt ?? null,
     wordCount: excerpt.split(/\s+/).filter(Boolean).length,
     score: input.score ?? 80,
     r2Key: null,
     discoveredVia: input.discoveredVia,
+    imageUrl:
+      contentType === "tweet"
+        ? (tweet?.imageUrl ?? tweetEmbedImageUrl(canonical))
+        : null,
   });
 
   await markJob(env.DB, canonical, "done");

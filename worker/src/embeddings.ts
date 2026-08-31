@@ -81,7 +81,7 @@ export async function postsByIds(
   const placeholders = ids.map(() => "?").join(",");
   const rows = await db
     .prepare(
-      `SELECT id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via
+      `SELECT id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via, image_url
        FROM posts WHERE id IN (${placeholders})`,
     )
     .bind(...ids)
@@ -97,6 +97,7 @@ export async function postsByIds(
       word_count: number;
       published_at: number | null;
       discovered_via: string;
+      image_url: string | null;
     }>();
 
   const byId = new Map(
@@ -114,6 +115,7 @@ export async function postsByIds(
         wordCount: row.word_count,
         publishedAt: row.published_at,
         discoveredVia: row.discovered_via,
+        imageUrl: row.image_url,
       } satisfies PostSummary,
     ]),
   );

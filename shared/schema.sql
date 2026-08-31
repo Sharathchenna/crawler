@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS posts (
   score REAL NOT NULL,
   r2_key TEXT,
   discovered_via TEXT NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  image_url TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_score ON posts (score DESC);

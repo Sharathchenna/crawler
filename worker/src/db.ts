@@ -78,7 +78,7 @@ export async function upsertSource(
   return row.id;
 }
 
-const SELECT_SUMMARY = `id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via`;
+const SELECT_SUMMARY = `id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via, image_url`;
 
 export async function insertPost(
   db: D1Database,
@@ -96,14 +96,15 @@ export async function insertPost(
     score: number;
     r2Key: string | null;
     discoveredVia: string;
+    imageUrl?: string | null;
   },
 ): Promise<number> {
   const result = await db
     .prepare(
       `INSERT INTO posts (
          url, canonical_url, source_id, title, excerpt, site, topic, content_type,
-         published_at, word_count, score, r2_key, discovered_via, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         published_at, word_count, score, r2_key, discovered_via, created_at, image_url
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(canonical_url) DO UPDATE SET
          title = excluded.title,
          excerpt = excluded.excerpt,
@@ -111,6 +112,7 @@ export async function insertPost(
          word_count = excluded.word_count,
          r2_key = excluded.r2_key,
          content_type = excluded.content_type,
+         image_url = COALESCE(excluded.image_url, posts.image_url),
          discovered_via = CASE
            WHEN excluded.discovered_via = 'saved' THEN 'saved'
            ELSE posts.discovered_via
@@ -132,6 +134,7 @@ export async function insertPost(
       post.r2Key,
       post.discoveredVia,
       Date.now(),
+      post.imageUrl ?? null,
     )
     .first<{ id: number }>();
 
@@ -153,6 +156,7 @@ type SummaryRow = {
   word_count: number;
   published_at: number | null;
   discovered_via: string;
+  image_url: string | null;
 };
 
 function toSummary(row: SummaryRow): PostSummary {
@@ -168,6 +172,7 @@ function toSummary(row: SummaryRow): PostSummary {
     wordCount: row.word_count,
     publishedAt: row.published_at,
     discoveredVia: row.discovered_via,
+    imageUrl: row.image_url,
   };
 }
 

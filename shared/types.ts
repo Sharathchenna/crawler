@@ -20,6 +20,7 @@ export type PostSummary = {
   wordCount: number;
   publishedAt: number | null;
   discoveredVia: string;
+  imageUrl?: string | null;
 };
 
 export type PostDetail = PostSummary & {

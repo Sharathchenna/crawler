@@ -1,10 +1,6 @@
 import { PageShot } from "@/components/page-shot";
-import {
-  faviconUrl,
-  formatDate,
-  siteLabel,
-  tweetHandle,
-} from "@/lib/format";
+import { TweetEmbed } from "@/components/tweet-embed";
+import { faviconUrl, formatDate, siteLabel } from "@/lib/format";
 import { CONTENT_TYPE_LABELS, type ContentType, type PostSummary } from "@/shared/types";
 
 const TYPE_BADGE: Record<ContentType, string> = {
@@ -17,22 +13,6 @@ const TYPE_BADGE: Record<ContentType, string> = {
 
 function Cover({ post }: { post: PostSummary }) {
   const site = siteLabel(post.site);
-
-  if (post.contentType === "tweet") {
-    return (
-      <div className="flex h-full flex-col justify-between bg-gradient-to-br from-paper to-parchment p-5">
-        <p className="text-sm font-medium text-terracotta">
-          {tweetHandle(post.url, post.title)}
-        </p>
-        <p className="line-clamp-5 text-lg font-medium leading-snug tracking-tight text-ink">
-          {post.excerpt.startsWith("http") ? post.title : post.excerpt || post.title}
-        </p>
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">
-          {site}
-        </p>
-      </div>
-    );
-  }
 
   if (post.contentType === "paper") {
     return (
@@ -78,8 +58,37 @@ function Favicon({ site }: { site: string }) {
   );
 }
 
+function CardMeta({ post }: { post: PostSummary }) {
+  return (
+    <p className="flex items-center gap-2 text-xs text-muted">
+      <Favicon site={post.site} />
+      <span className="truncate">{siteLabel(post.site)}</span>
+      <span aria-hidden="true">·</span>
+      <span className="shrink-0">{formatDate(post.publishedAt)}</span>
+    </p>
+  );
+}
+
+function TweetCard({ post }: { post: PostSummary }) {
+  return (
+    <article className="flex flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_rgb(44_36_22_/_0.04)]">
+      <TweetEmbed url={post.url} />
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <CardMeta post={post} />
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${TYPE_BADGE.tweet}`}
+        >
+          {CONTENT_TYPE_LABELS.tweet}
+        </span>
+      </div>
+    </article>
+  );
+}
+
 export function PostCard({ post }: { post: PostSummary }) {
-  const showShot = post.contentType !== "tweet";
+  if (post.contentType === "tweet") {
+    return <TweetCard post={post} />;
+  }
 
   return (
     <a
@@ -90,7 +99,7 @@ export function PostCard({ post }: { post: PostSummary }) {
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-paper-deep">
         <Cover post={post} />
-        {showShot ? <PageShot url={post.url} /> : null}
+        <PageShot url={post.url} />
         <span
           className={`absolute top-3 left-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${TYPE_BADGE[post.contentType]}`}
         >
@@ -98,16 +107,11 @@ export function PostCard({ post }: { post: PostSummary }) {
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-        <p className="flex items-center gap-2 text-xs text-muted">
-          <Favicon site={post.site} />
-          <span className="truncate">{siteLabel(post.site)}</span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0">{formatDate(post.publishedAt)}</span>
-        </p>
+        <CardMeta post={post} />
         <h2 className="text-base font-semibold leading-snug tracking-tight text-ink group-hover:text-terracotta">
           {post.title}
         </h2>
-        {post.excerpt && post.contentType !== "tweet" ? (
+        {post.excerpt ? (
           <p className="line-clamp-2 text-sm leading-relaxed text-muted">{post.excerpt}</p>
         ) : null}
       </div>
