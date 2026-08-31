@@ -5,8 +5,10 @@ import {
   crawlerRequest as httpCrawlerRequest,
 } from "./origin-http";
 
+type CrawlerFetcher = { fetch(request: Request): Promise<Response> };
+
 type CrawlerEnv = {
-  CRAWLER?: Fetcher;
+  CRAWLER?: CrawlerFetcher;
   CRAWLER_ORIGIN?: string;
 };
 
