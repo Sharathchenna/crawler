@@ -72,7 +72,17 @@ function CardMeta({ post }: { post: PostSummary }) {
 function TweetCard({ post }: { post: PostSummary }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_rgb(44_36_22_/_0.04)]">
-      <TweetEmbed url={post.url} />
+      <div className="relative max-h-72 overflow-hidden">
+        <TweetEmbed url={post.url} />
+        <a
+          href={post.url}
+          target="_blank"
+          rel="noreferrer"
+          className="pointer-events-auto absolute inset-x-0 bottom-0 flex h-16 items-end justify-center bg-gradient-to-t from-paper via-paper/80 to-transparent pb-2 text-xs font-medium text-terracotta no-underline"
+        >
+          Open on X
+        </a>
+      </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <CardMeta post={post} />
         <span

@@ -1,0 +1,18 @@
+{
+  "name": "Parchment (PWA + crawler)",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "crawler",
+      "command": "export BUN_INSTALL=\"$HOME/.bun\"; export PATH=\"$BUN_INSTALL/bin:$PATH\"; bun run dev:crawler"
+    },
+    {
+      "name": "pwa",
+      "command": "export BUN_INSTALL=\"$HOME/.bun\"; export PATH=\"$BUN_INSTALL/bin:$PATH\"; bun run dev"
+    }
+  ],
+  "ports": [
+    { "name": "pwa", "port": 3000 },
+    { "name": "crawler", "port": 8787 }
+  ]
+}
