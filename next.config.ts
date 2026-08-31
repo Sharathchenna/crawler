@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       "@/lib/origin": originHttp,
+      "@/lib/origin.ts": originHttp,
+      [path.join(root, "lib/origin")]: originHttp,
       [path.join(root, "lib/origin.ts")]: originHttp,
     };
     return config;

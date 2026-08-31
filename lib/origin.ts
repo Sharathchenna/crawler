@@ -2,4 +2,4 @@ export {
   crawlerFetch,
   crawlerOrigin,
   crawlerRequest,
-} from "./origin-http";
+} from "./origin-cloudflare";
