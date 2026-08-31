@@ -1,24 +1,24 @@
 import Link from "next/link";
 import {
-  CONTENT_TYPE_LABELS,
-  CONTENT_TYPES,
+  REACTION_KINDS,
+  REACTION_LABELS,
   type ContentType,
   type Origin,
   type ReactionKind,
 } from "@/shared/types";
 
-export function TypeChips({
+export function ReactionChips({
   active,
   query,
   origin,
-  reaction,
+  type,
 }: {
-  active?: ContentType;
+  active?: ReactionKind;
   query?: string;
   origin?: Origin;
-  reaction?: ReactionKind;
+  type?: ContentType;
 }) {
-  const hrefFor = (type?: ContentType) => {
+  const hrefFor = (reaction?: ReactionKind) => {
     const params = new URLSearchParams();
     if (query) {
       params.set("q", query);
@@ -26,11 +26,11 @@ export function TypeChips({
     if (origin) {
       params.set("origin", origin);
     }
-    if (reaction) {
-      params.set("reaction", reaction);
-    }
     if (type) {
       params.set("type", type);
+    }
+    if (reaction) {
+      params.set("reaction", reaction);
     }
     const search = params.toString();
     return search ? `/search?${search}` : "/search";
@@ -47,22 +47,22 @@ export function TypeChips({
               : "border-rule text-muted hover:border-terracotta hover:text-terracotta"
           }`}
         >
-          All types
+          All
         </Link>
       </li>
-      {CONTENT_TYPES.map((type) => {
-        const isActive = active === type;
+      {REACTION_KINDS.map((kind) => {
+        const isActive = active === kind;
         return (
-          <li key={type}>
+          <li key={kind}>
             <Link
-              href={hrefFor(type)}
+              href={hrefFor(kind)}
               className={`inline-block rounded-full border px-3 py-1 text-sm no-underline transition-colors ${
                 isActive
                   ? "border-terracotta bg-terracotta text-paper"
                   : "border-rule text-muted hover:border-terracotta hover:text-terracotta"
               }`}
             >
-              {CONTENT_TYPE_LABELS[type]}
+              {REACTION_LABELS[kind]}
             </Link>
           </li>
         );

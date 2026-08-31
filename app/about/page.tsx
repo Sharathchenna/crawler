@@ -25,6 +25,13 @@ export default function AboutPage() {
           every six hours.
         </p>
         <p>
+          Like, pass, or mark a card <strong>read</strong> and it leaves the
+          live shelves for <strong>Archive</strong>, so Yours and Suggested stay
+          unread. Likes raise similar sites, topics, and types in Suggested.
+          Passes bury them, and the crawler stops fetching domains you keep
+          passing. Restore anything from Archive if you want it back.
+        </p>
+        <p>
           {APP_NAME} does not replace the source. Tweets are stored as links
           (no X API). Papers keep the abstract. Search is keyword today;
           embeddings + Vectorize turn on after Cloudflare login.

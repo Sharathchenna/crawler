@@ -1,13 +1,13 @@
 import { classifyUrl } from "../../shared/classify";
 import type { SourceKind } from "../../shared/types";
 import { fetchArxivPapers } from "./arxiv";
-import { alreadySeen, markJob, pruneStaleSuggested } from "./db";
+import { alreadySeen, avoidedSiteSet, markJob, pruneStaleSuggested } from "./db";
 import type { Env } from "./env";
 import { fetchHnFavorites } from "./hn";
 import { queriesForThisRun } from "./queries";
 import { saveLink } from "./save";
 import { tinyfishSearch } from "./tinyfish";
-import { canonicalize, isBlocked } from "./urls";
+import { canonicalize, hostnameOf, isBlocked } from "./urls";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,9 +26,15 @@ export async function enqueueUrl(
   discoveredVia: string,
   sourceKind: SourceKind,
   depth: number,
+  avoided?: Set<string>,
 ): Promise<boolean> {
   const canonical = canonicalize(rawUrl);
   if (!canonical || isBlocked(canonical)) {
+    return false;
+  }
+  const skipSites = avoided ?? (await avoidedSiteSet(env.DB));
+  if (skipSites.has(hostnameOf(canonical))) {
+    await markJob(env.DB, canonical, "skipped", "passed_site");
     return false;
   }
   if (classifyUrl(canonical, discoveredVia) === "tweet") {
@@ -62,11 +68,16 @@ export async function discover(env: Env): Promise<DiscoverResult> {
   };
   const apiKey = env.TINYFISH_API_KEY?.trim();
   await pruneStaleSuggested(env.DB);
+  const avoided = await avoidedSiteSet(env.DB);
 
   try {
     const stories = await fetchHnFavorites();
     result.hn.fetched = stories.length;
     for (const story of stories) {
+      const host = hostnameOf(story.url);
+      if (host && avoided.has(host)) {
+        continue;
+      }
       const saved = await saveLink(env, {
         url: story.url,
         title: story.title,
@@ -123,7 +134,7 @@ export async function discover(env: Env): Promise<DiscoverResult> {
         item.includeDomains,
       );
       for (const hit of hits) {
-        if (await enqueueUrl(env, hit.url, "tinyfish", item.sourceKind, 0)) {
+        if (await enqueueUrl(env, hit.url, "tinyfish", item.sourceKind, 0, avoided)) {
           result.tinyfish.created += 1;
           result.enqueued += 1;
         }

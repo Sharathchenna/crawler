@@ -1,5 +1,13 @@
 import { suggestedSince } from "../../shared/freshness";
-import { originOf, type ContentType, type Origin, type PostSummary, type Topic } from "../../shared/types";
+import {
+  originOf,
+  type ContentType,
+  type Origin,
+  type PostSummary,
+  type ReactionKind,
+  type Topic,
+} from "../../shared/types";
+import { likedPostTexts } from "./db";
 import type { Env } from "./env";
 
 const EMBED_MODEL = "@cf/baai/bge-base-en-v1.5";
@@ -70,10 +78,26 @@ export async function semanticIds(
   }
 }
 
+export async function similarToLikes(env: Env): Promise<number[]> {
+  const liked = await likedPostTexts(env.DB);
+  if (liked.length === 0) {
+    return [];
+  }
+  const query = liked
+    .map((post) => `${post.title}\n${post.excerpt}`)
+    .join("\n\n")
+    .slice(0, 4000);
+  return (await semanticIds(env, query)) ?? [];
+}
+
 export async function postsByIds(
   db: D1Database,
   ids: number[],
-  options: { contentType?: ContentType; origin?: Origin } = {},
+  options: {
+    contentType?: ContentType;
+    origin?: Origin;
+    reaction?: ReactionKind;
+  } = {},
 ): Promise<PostSummary[]> {
   if (ids.length === 0) {
     return [];
@@ -81,8 +105,12 @@ export async function postsByIds(
   const placeholders = ids.map(() => "?").join(",");
   const rows = await db
     .prepare(
-      `SELECT id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via, image_url
-       FROM posts WHERE id IN (${placeholders})`,
+      `SELECT posts.id, posts.url, posts.title, posts.excerpt, posts.site, posts.topic,
+              posts.content_type, posts.score, posts.word_count, posts.published_at,
+              posts.discovered_via, posts.image_url, reactions.kind AS reaction
+       FROM posts
+       LEFT JOIN reactions ON reactions.post_id = posts.id
+       WHERE posts.id IN (${placeholders})`,
     )
     .bind(...ids)
     .all<{
@@ -98,9 +126,10 @@ export async function postsByIds(
       published_at: number | null;
       discovered_via: string;
       image_url: string | null;
+      reaction: ReactionKind | null;
     }>();
 
-  const byId = new Map(
+  const byId = new Map<number, PostSummary>(
     (rows.results ?? []).map((row) => [
       row.id,
       {
@@ -116,7 +145,8 @@ export async function postsByIds(
         publishedAt: row.published_at,
         discoveredVia: row.discovered_via,
         imageUrl: row.image_url,
-      } satisfies PostSummary,
+        reaction: row.reaction,
+      },
     ]),
   );
 
@@ -124,9 +154,21 @@ export async function postsByIds(
     .map((id) => byId.get(id))
     .filter((post): post is PostSummary => Boolean(post))
     .filter((post) => (options.contentType ? post.contentType === options.contentType : true))
-    .filter((post) => (options.origin ? originOf(post.discoveredVia) === options.origin : true))
+    .filter((post) => (options.reaction ? post.reaction === options.reaction : true))
     .filter((post) => {
-      if (options.origin === "saved") {
+      if (options.origin === "archived") {
+        return Boolean(post.reaction);
+      }
+      if (options.origin === "saved" || options.origin === "suggested") {
+        if (post.reaction) {
+          return false;
+        }
+        return originOf(post.discoveredVia) === options.origin;
+      }
+      return true;
+    })
+    .filter((post) => {
+      if (options.origin === "archived" || options.origin === "saved" || post.reaction) {
         return true;
       }
       if (!post.publishedAt) {

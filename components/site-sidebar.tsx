@@ -16,6 +16,7 @@ function searchHref(input: {
   origin?: string | null;
   type?: string | null;
   query?: string | null;
+  reaction?: string | null;
 }) {
   const params = new URLSearchParams();
   if (input.query) {
@@ -26,6 +27,9 @@ function searchHref(input: {
   }
   if (input.type) {
     params.set("type", input.type);
+  }
+  if (input.reaction) {
+    params.set("reaction", input.reaction);
   }
   const query = params.toString();
   return query ? `/search?${query}` : "/search";
@@ -77,6 +81,13 @@ function SidebarBody({
           onClick={onNavigate}
         >
           Suggested
+        </Link>
+        <Link
+          href="/search?origin=archived"
+          className={navClass(onSearch && activeOrigin === "archived")}
+          onClick={onNavigate}
+        >
+          Archive
         </Link>
         <Link
           href="/search"

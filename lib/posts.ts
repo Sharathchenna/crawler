@@ -2,11 +2,13 @@ import { crawlerFetch } from "@/lib/origin";
 import {
   isContentType,
   isOrigin,
+  isReactionKind,
   isTopic,
   type ContentType,
   type Origin,
   type PostDetail,
   type PostSummary,
+  type ReactionKind,
   type Topic,
 } from "@/shared/types";
 
@@ -14,6 +16,7 @@ type ListOptions = {
   topic?: Topic;
   contentType?: ContentType;
   origin?: Origin;
+  reaction?: ReactionKind;
   limit?: number;
 };
 
@@ -30,6 +33,9 @@ export async function listPosts(
   if (options.origin) {
     params.set("origin", options.origin);
   }
+  if (options.reaction) {
+    params.set("reaction", options.reaction);
+  }
   if (options.limit) {
     params.set("limit", String(options.limit));
   }
@@ -44,10 +50,21 @@ export async function listPosts(
 
 export async function searchPosts(
   query: string,
-  options: { topic?: Topic; contentType?: ContentType; origin?: Origin } = {},
+  options: {
+    topic?: Topic;
+    contentType?: ContentType;
+    origin?: Origin;
+    reaction?: ReactionKind;
+  } = {},
 ): Promise<PostSummary[]> {
   const trimmed = query.trim();
-  if (!trimmed && !options.topic && !options.contentType && !options.origin) {
+  if (
+    !trimmed &&
+    !options.topic &&
+    !options.contentType &&
+    !options.origin &&
+    !options.reaction
+  ) {
     return listPosts();
   }
 
@@ -64,6 +81,9 @@ export async function searchPosts(
   if (options.origin) {
     params.set("origin", options.origin);
   }
+  if (options.reaction) {
+    params.set("reaction", options.reaction);
+  }
 
   const remote = await crawlerFetch<{ posts: PostSummary[] }>(
     `/api/search?${params.toString()}`,
@@ -72,8 +92,14 @@ export async function searchPosts(
   return remote?.posts ?? [];
 }
 
-export async function getStats(): Promise<{ suggested: number; saved: number } | null> {
-  return crawlerFetch<{ suggested: number; saved: number }>("/api/stats");
+export async function getStats(): Promise<{
+  suggested: number;
+  saved: number;
+  archived: number;
+} | null> {
+  return crawlerFetch<{ suggested: number; saved: number; archived: number }>(
+    "/api/stats",
+  );
 }
 
 export async function getPost(id: number): Promise<PostDetail | null> {
@@ -109,6 +135,16 @@ export function parseOriginParam(
     return undefined;
   }
   return isOrigin(raw) ? raw : undefined;
+}
+
+export function parseReactionParam(
+  value: string | string[] | undefined,
+): ReactionKind | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) {
+    return undefined;
+  }
+  return isReactionKind(raw) ? raw : undefined;
 }
 
 export function parseQueryParam(

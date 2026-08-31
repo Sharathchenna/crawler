@@ -26,7 +26,8 @@ export default async function HomePage() {
         <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
           Two shelves. Yours is anything you paste — tweets, papers, blogs.
           Suggested is what the crawler brings in from HN, arXiv, and the open
-          web.
+          web. Like, pass, or mark a card read and it files in Archive so these
+          shelves stay new.
         </p>
         <div className="mt-10">
           <SearchForm />
@@ -40,7 +41,8 @@ export default async function HomePage() {
               Yours
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted">
-              Paste a URL you found interesting. Tweets, papers, anything.
+              Paste a URL you found interesting. Tweets, papers, anything. Mark
+              it read when you are done.
             </p>
           </div>
           <Link
@@ -66,12 +68,18 @@ export default async function HomePage() {
               Suggested
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted">
-              HN favorites, new arXiv papers, and company blogs. Runs on a
-              schedule, or hit Find more.
+              HN favorites, new arXiv papers, and company blogs. Like what you
+              want more of, pass the rest. Runs on a schedule, or hit Find more.
             </p>
           </div>
           <div className="flex items-center gap-5">
             <DiscoverButton />
+            <Link
+              href="/search?origin=archived"
+              className="text-xs font-medium uppercase tracking-[0.16em] text-muted no-underline hover:text-terracotta"
+            >
+              Archive
+            </Link>
             <Link
               href="/search?origin=suggested"
               className="text-xs font-medium uppercase tracking-[0.16em] text-terracotta no-underline"
@@ -82,7 +90,7 @@ export default async function HomePage() {
         </div>
         <PostList
           posts={suggested}
-          empty="No suggestions yet. Start the crawler, then Find more."
+          empty="No suggestions yet. Start the crawler, then Find more — or everything here is already in Archive."
         />
       </section>
     </main>

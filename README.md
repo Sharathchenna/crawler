@@ -7,6 +7,8 @@ Two shelves:
 - **Yours** — anything you paste (tweet, paper, blog, repo).
 - **Suggested** — what the crawler found in the last **7 days**: recent Hacker News, new arXiv papers, and company / personal longform via TinyFish. Ranked as a mix, not all-time HN classics.
 
+Like, pass, or mark a card **read** and it leaves those shelves for **Archive**, so they stay unread. Likes and passes also steer Suggested ranking (site / topic / type, plus Vectorize similarity when AI is bound). Passes stop the crawler from refetching that domain.
+
 Live: [crawler.sharathchenna87.workers.dev](https://crawler.sharathchenna87.workers.dev) (Cloudflare Access) talking to [parchment-crawler](https://parchment-crawler.sharathchenna87.workers.dev).
 
 ## How it is put together
@@ -49,11 +51,11 @@ Already wired in this repo: D1 `parchment`, R2 `parchment-posts`, queue `parchme
 bunx wrangler secret put TINYFISH_API_KEY --config worker/wrangler.jsonc
 bun run db:migrate
 bun run deploy:crawler
-bun run build:vinext
+bun run build
 bun run deploy:vinext
 ```
 
-Root `wrangler.jsonc` sets `CRAWLER_ORIGIN` and the `CRAWLER` service binding to `parchment-crawler`. Do not skip `build:vinext` — `deploy:vinext` ships `dist/`.
+Root `wrangler.jsonc` sets `CRAWLER_ORIGIN`, the `CRAWLER` service binding to `parchment-crawler`, and `preview_urls`. `bun run build` is vinext: it writes `dist/` and `.wrangler/deploy/config.json` so Workers Builds can run `npx wrangler versions upload` on PRs. `bun run build:next` is webpack.
 
 On a new Cloudflare account, create those resources first, paste IDs into `worker/wrangler.jsonc` and `wrangler.jsonc`, then deploy crawler before the PWA.
 
@@ -63,7 +65,7 @@ Discover (cron or **Find more**) prunes Suggested older than 7 days, then enqueu
 
 Search tries Vectorize (`@cf/baai/bge-base-en-v1.5`, 768d) and falls back to SQL `LIKE` if AI / Vectorize is missing.
 
-Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `GET /health`.
+Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `POST /api/react`, `DELETE /api/react`, `GET /health`.
 
 ## Layout
 

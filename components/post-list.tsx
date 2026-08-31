@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { CardActions } from "@/components/card-actions";
 import { PageShot } from "@/components/page-shot";
 import { TweetEmbed } from "@/components/tweet-embed";
 import { faviconUrl, formatDate, siteLabel } from "@/lib/format";
@@ -69,7 +73,15 @@ function CardMeta({ post }: { post: PostSummary }) {
   );
 }
 
-function TweetCard({ post }: { post: PostSummary }) {
+function TweetCard({
+  post,
+  shelf,
+  onGone,
+}: {
+  post: PostSummary;
+  shelf: "live" | "archive";
+  onGone: (id: number) => void;
+}) {
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_rgb(44_36_22_/_0.04)]">
       <div className="relative max-h-72 overflow-hidden">
@@ -91,52 +103,69 @@ function TweetCard({ post }: { post: PostSummary }) {
           {CONTENT_TYPE_LABELS.tweet}
         </span>
       </div>
+      <CardActions post={post} shelf={shelf} onGone={onGone} />
     </article>
   );
 }
 
-export function PostCard({ post }: { post: PostSummary }) {
+function PostCard({
+  post,
+  shelf,
+  onGone,
+}: {
+  post: PostSummary;
+  shelf: "live" | "archive";
+  onGone: (id: number) => void;
+}) {
   if (post.contentType === "tweet") {
-    return <TweetCard post={post} />;
+    return <TweetCard post={post} shelf={shelf} onGone={onGone} />;
   }
 
   return (
-    <a
-      href={post.url}
-      target="_blank"
-      rel="noreferrer"
-      className="group flex flex-col overflow-hidden rounded-xl border border-rule bg-paper no-underline shadow-[0_1px_0_rgb(44_36_22_/_0.04)] transition hover:-translate-y-0.5 hover:border-terracotta hover:shadow-[0_12px_30px_rgb(44_36_22_/_0.08)]"
-    >
-      <div className="relative aspect-[16/10] overflow-hidden bg-paper-deep">
-        <Cover post={post} />
-        <PageShot url={post.url} />
-        <span
-          className={`absolute top-3 left-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${TYPE_BADGE[post.contentType]}`}
-        >
-          {CONTENT_TYPE_LABELS[post.contentType]}
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-        <CardMeta post={post} />
-        <h2 className="text-base font-semibold leading-snug tracking-tight text-ink group-hover:text-terracotta">
-          {post.title}
-        </h2>
-        {post.excerpt ? (
-          <p className="line-clamp-2 text-sm leading-relaxed text-muted">{post.excerpt}</p>
-        ) : null}
-      </div>
-    </a>
+    <article className="flex flex-col overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_1px_0_rgb(44_36_22_/_0.04)] transition hover:-translate-y-0.5 hover:border-terracotta hover:shadow-[0_12px_30px_rgb(44_36_22_/_0.08)]">
+      <a
+        href={post.url}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex flex-1 flex-col no-underline"
+      >
+        <div className="relative aspect-[16/10] overflow-hidden bg-paper-deep">
+          <Cover post={post} />
+          <PageShot url={post.url} />
+          <span
+            className={`absolute top-3 left-3 z-10 rounded-full px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] ${TYPE_BADGE[post.contentType]}`}
+          >
+            {CONTENT_TYPE_LABELS[post.contentType]}
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+          <CardMeta post={post} />
+          <h2 className="text-base font-semibold leading-snug tracking-tight text-ink group-hover:text-terracotta">
+            {post.title}
+          </h2>
+          {post.excerpt ? (
+            <p className="line-clamp-2 text-sm leading-relaxed text-muted">{post.excerpt}</p>
+          ) : null}
+        </div>
+      </a>
+      <CardActions post={post} shelf={shelf} onGone={onGone} />
+    </article>
   );
 }
 
 export function PostList({
   posts,
   empty = "Nothing on this shelf yet.",
+  shelf = "live",
 }: {
   posts: PostSummary[];
   empty?: string;
+  shelf?: "live" | "archive";
 }) {
-  if (posts.length === 0) {
+  const [gone, setGone] = useState<Set<number>>(() => new Set());
+  const visible = posts.filter((post) => !gone.has(post.id));
+
+  if (visible.length === 0) {
     return (
       <p className="border-t border-rule pt-8 text-lg text-muted">{empty}</p>
     );
@@ -144,8 +173,21 @@ export function PostList({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
+      {visible.map((post) => (
+        <PostCard
+          key={post.id}
+          post={post}
+          shelf={
+            shelf === "archive" || post.reaction ? "archive" : "live"
+          }
+          onGone={(id) => {
+            setGone((current) => {
+              const next = new Set(current);
+              next.add(id);
+              return next;
+            });
+          }}
+        />
       ))}
     </div>
   );
