@@ -2,10 +2,12 @@ export function SearchForm({
   defaultQuery = "",
   defaultType,
   defaultOrigin,
+  defaultReaction,
 }: {
   defaultQuery?: string;
   defaultType?: string;
   defaultOrigin?: string;
+  defaultReaction?: string;
 }) {
   return (
     <form action="/search" className="w-full">
@@ -14,6 +16,9 @@ export function SearchForm({
       ) : null}
       {defaultOrigin ? (
         <input type="hidden" name="origin" value={defaultOrigin} />
+      ) : null}
+      {defaultReaction ? (
+        <input type="hidden" name="reaction" value={defaultReaction} />
       ) : null}
       <label className="sr-only" htmlFor="q">
         Search the library

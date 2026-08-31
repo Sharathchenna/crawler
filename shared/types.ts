@@ -8,6 +8,20 @@ export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type SourceKind = "company_blog" | "hn" | "essay" | "personal";
 
+export const REACTION_KINDS = ["like", "dislike", "read"] as const;
+
+export type ReactionKind = (typeof REACTION_KINDS)[number];
+
+export const REACTION_LABELS: Record<ReactionKind, string> = {
+  like: "Liked",
+  dislike: "Passed",
+  read: "Read",
+};
+
+export function isReactionKind(value: string): value is ReactionKind {
+  return (REACTION_KINDS as readonly string[]).includes(value);
+}
+
 export type PostSummary = {
   id: number;
   url: string;
@@ -21,6 +35,7 @@ export type PostSummary = {
   publishedAt: number | null;
   discoveredVia: string;
   imageUrl?: string | null;
+  reaction?: ReactionKind | null;
 };
 
 export type PostDetail = PostSummary & {
@@ -43,7 +58,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   other: "Everything else",
 };
 
-export const ORIGINS = ["suggested", "saved"] as const;
+export const ORIGINS = ["suggested", "saved", "archived"] as const;
 
 export type Origin = (typeof ORIGINS)[number];
 
@@ -58,4 +73,5 @@ export function originOf(discoveredVia: string): Origin {
 export const ORIGIN_LABELS: Record<Origin, string> = {
   suggested: "Suggested",
   saved: "Yours",
+  archived: "Archive",
 };

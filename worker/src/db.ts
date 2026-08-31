@@ -1,9 +1,17 @@
 import { suggestedSince } from "../../shared/freshness";
+import {
+  EMPTY_SIGNALS,
+  avoidedDomains,
+  rankForSuggested,
+  signalsFromReactions,
+  type PreferenceSignals,
+} from "../../shared/preference";
 import type {
   ContentType,
   Origin,
   PostDetail,
   PostSummary,
+  ReactionKind,
   SourceKind,
   Topic,
 } from "../../shared/types";
@@ -78,7 +86,9 @@ export async function upsertSource(
   return row.id;
 }
 
-const SELECT_SUMMARY = `id, url, title, excerpt, site, topic, content_type, score, word_count, published_at, discovered_via, image_url`;
+const SELECT_SUMMARY = `posts.id, posts.url, posts.title, posts.excerpt, posts.site, posts.topic, posts.content_type, posts.score, posts.word_count, posts.published_at, posts.discovered_via, posts.image_url, posts.created_at, reactions.kind AS reaction`;
+
+const FROM_POSTS = `FROM posts LEFT JOIN reactions ON reactions.post_id = posts.id`;
 
 export async function insertPost(
   db: D1Database,
@@ -157,6 +167,8 @@ type SummaryRow = {
   published_at: number | null;
   discovered_via: string;
   image_url: string | null;
+  created_at: number;
+  reaction: ReactionKind | null;
 };
 
 function toSummary(row: SummaryRow): PostSummary {
@@ -173,35 +185,51 @@ function toSummary(row: SummaryRow): PostSummary {
     publishedAt: row.published_at,
     discoveredVia: row.discovered_via,
     imageUrl: row.image_url,
+    reaction: row.reaction,
+  };
+}
+
+function toRankable(row: SummaryRow) {
+  return {
+    id: row.id,
+    site: row.site,
+    topic: row.topic,
+    contentType: row.content_type,
+    score: row.score,
+    publishedAt: row.published_at,
+    createdAt: row.created_at,
   };
 }
 
 function originClause(origin?: Origin): { sql: string; binds: string[] } {
   if (origin === "saved") {
-    return { sql: "discovered_via = ?", binds: ["saved"] };
+    return { sql: "posts.discovered_via = ?", binds: ["saved"] };
   }
   if (origin === "suggested") {
-    return { sql: "discovered_via != ?", binds: ["saved"] };
+    return { sql: "posts.discovered_via != ?", binds: ["saved"] };
   }
   return { sql: "", binds: [] };
 }
 
+type ShelfOptions = {
+  topic?: Topic;
+  contentType?: ContentType;
+  origin?: Origin;
+  reaction?: ReactionKind;
+  since?: number;
+};
+
 function applyShelfFilters(
   filters: string[],
   binds: Array<string | number>,
-  options: {
-    topic?: Topic;
-    contentType?: ContentType;
-    origin?: Origin;
-    since?: number;
-  },
+  options: ShelfOptions,
 ): void {
   if (options.contentType) {
-    filters.push("content_type = ?");
+    filters.push("posts.content_type = ?");
     binds.push(options.contentType);
   }
   if (options.topic) {
-    filters.push("topic = ?");
+    filters.push("posts.topic = ?");
     binds.push(options.topic);
   }
   const origin = originClause(options.origin);
@@ -209,16 +237,38 @@ function applyShelfFilters(
     filters.push(origin.sql);
     binds.push(...origin.binds);
   }
+  if (options.origin === "archived") {
+    filters.push("reactions.post_id IS NOT NULL");
+  } else if (options.origin === "saved" || options.origin === "suggested") {
+    filters.push("reactions.post_id IS NULL");
+  }
+  if (options.reaction) {
+    filters.push("reactions.kind = ?");
+    binds.push(options.reaction);
+  }
+  if (options.origin === "archived") {
+    return;
+  }
   const since = options.since ?? suggestedSince();
   if (options.origin === "suggested") {
-    filters.push("COALESCE(published_at, created_at) >= ?");
+    filters.push("COALESCE(posts.published_at, posts.created_at) >= ?");
     binds.push(since);
   } else if (options.origin === undefined) {
     filters.push(
-      "(discovered_via = 'saved' OR COALESCE(published_at, created_at) >= ?)",
+      "(posts.discovered_via = 'saved' OR COALESCE(posts.published_at, posts.created_at) >= ? OR reactions.post_id IS NOT NULL)",
     );
     binds.push(since);
   }
+}
+
+function orderClause(origin?: Origin): string {
+  if (origin === "archived") {
+    return "reactions.created_at DESC, posts.created_at DESC";
+  }
+  if (origin === "saved") {
+    return "posts.score DESC, posts.created_at DESC";
+  }
+  return "COALESCE(posts.published_at, posts.created_at) DESC, posts.score DESC";
 }
 
 export async function pruneStaleSuggested(db: D1Database): Promise<number> {
@@ -227,7 +277,8 @@ export async function pruneStaleSuggested(db: D1Database): Promise<number> {
     .prepare(
       `DELETE FROM posts
        WHERE discovered_via != 'saved'
-         AND COALESCE(published_at, created_at) < ?`,
+         AND COALESCE(published_at, created_at) < ?
+         AND id NOT IN (SELECT post_id FROM reactions)`,
     )
     .bind(since)
     .run();
@@ -236,30 +287,36 @@ export async function pruneStaleSuggested(db: D1Database): Promise<number> {
 
 async function querySummaries(
   db: D1Database,
-  options: {
-    topic?: Topic;
-    contentType?: ContentType;
-    origin?: Origin;
+  options: ShelfOptions & {
     limit: number;
+    signals?: PreferenceSignals;
   },
 ): Promise<PostSummary[]> {
   const limit = Math.min(Math.max(options.limit, 1), 50);
+  const rankSuggested = options.origin === "suggested";
+  const fetchLimit = rankSuggested ? Math.min(50, Math.max(limit * 3, limit)) : limit;
   const filters: string[] = [];
   const binds: Array<string | number> = [];
   applyShelfFilters(filters, binds, options);
-  binds.push(limit);
+  binds.push(fetchLimit);
   const where = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
-  const recencyFirst = options.origin !== "saved";
   const rows = await db
     .prepare(
-      `SELECT ${SELECT_SUMMARY} FROM posts
+      `SELECT ${SELECT_SUMMARY} ${FROM_POSTS}
        ${where}
-       ORDER BY ${recencyFirst ? "COALESCE(published_at, created_at) DESC, score DESC" : "score DESC, created_at DESC"}
+       ORDER BY ${orderClause(options.origin)}
        LIMIT ?`,
     )
     .bind(...binds)
     .all<SummaryRow>();
-  return (rows.results ?? []).map(toSummary);
+  const results = rows.results ?? [];
+  const ranked =
+    rankSuggested && options.signals
+      ? rankForSuggested(results.map(toRankable), options.signals).map(
+          (item) => results.find((row) => row.id === item.id)!,
+        )
+      : results;
+  return ranked.slice(0, limit).map(toSummary);
 }
 
 async function listSuggestedMix(
@@ -268,12 +325,19 @@ async function listSuggestedMix(
     topic?: Topic;
     origin?: Origin;
     limit: number;
+    signals?: PreferenceSignals;
   },
 ): Promise<PostSummary[]> {
   const types: ContentType[] = ["blog", "paper", "tweet", "hn"];
   const buckets = await Promise.all(
     types.map((contentType) =>
-      querySummaries(db, { ...options, contentType, origin: "suggested", limit: options.limit }),
+      querySummaries(db, {
+        ...options,
+        contentType,
+        origin: "suggested",
+        limit: options.limit,
+        signals: options.signals,
+      }),
     ),
   );
   const seen = new Set<number>();
@@ -299,6 +363,7 @@ async function listSuggestedMix(
       ...options,
       origin: "suggested",
       limit: options.limit,
+      signals: options.signals,
     });
     for (const post of rest) {
       if (seen.has(post.id)) {
@@ -315,11 +380,9 @@ async function listSuggestedMix(
 
 export async function listPosts(
   db: D1Database,
-  options: {
-    topic?: Topic;
-    contentType?: ContentType;
-    origin?: Origin;
+  options: ShelfOptions & {
     limit: number;
+    signals?: PreferenceSignals;
   },
 ): Promise<PostSummary[]> {
   const limit = Math.min(Math.max(options.limit, 1), 50);
@@ -332,11 +395,11 @@ export async function listPosts(
 export async function searchPosts(
   db: D1Database,
   query: string,
-  options: { topic?: Topic; contentType?: ContentType; origin?: Origin } = {},
+  options: ShelfOptions = {},
 ): Promise<PostSummary[]> {
   const like = `%${query.replaceAll("%", "").replaceAll("_", "")}%`;
   const filters: string[] = [
-    "(title LIKE ? OR excerpt LIKE ? OR site LIKE ? OR url LIKE ?)",
+    "(posts.title LIKE ? OR posts.excerpt LIKE ? OR posts.site LIKE ? OR posts.url LIKE ?)",
   ];
   const binds: Array<string | number> = [like, like, like, like];
   applyShelfFilters(filters, binds, options);
@@ -344,9 +407,9 @@ export async function searchPosts(
 
   const rows = await db
     .prepare(
-      `SELECT ${SELECT_SUMMARY} FROM posts
+      `SELECT ${SELECT_SUMMARY} ${FROM_POSTS}
        WHERE ${filters.join(" AND ")}
-       ORDER BY COALESCE(published_at, created_at) DESC, score DESC LIMIT ?`,
+       ORDER BY ${orderClause(options.origin)} LIMIT ?`,
     )
     .bind(...binds)
     .all<SummaryRow>();
@@ -355,22 +418,30 @@ export async function searchPosts(
 
 export async function catalogStats(
   db: D1Database,
-): Promise<{ suggested: number; saved: number }> {
+): Promise<{ suggested: number; saved: number; archived: number }> {
   const since = suggestedSince();
   const saved = await db
-    .prepare("SELECT COUNT(*) AS n FROM posts WHERE discovered_via = 'saved'")
+    .prepare(
+      `SELECT COUNT(*) AS n ${FROM_POSTS}
+       WHERE posts.discovered_via = 'saved' AND reactions.post_id IS NULL`,
+    )
     .first<{ n: number }>();
   const suggested = await db
     .prepare(
-      `SELECT COUNT(*) AS n FROM posts
-       WHERE discovered_via != 'saved'
-         AND COALESCE(published_at, created_at) >= ?`,
+      `SELECT COUNT(*) AS n ${FROM_POSTS}
+       WHERE posts.discovered_via != 'saved'
+         AND COALESCE(posts.published_at, posts.created_at) >= ?
+         AND reactions.post_id IS NULL`,
     )
     .bind(since)
+    .first<{ n: number }>();
+  const archived = await db
+    .prepare("SELECT COUNT(*) AS n FROM reactions")
     .first<{ n: number }>();
   return {
     saved: saved?.n ?? 0,
     suggested: suggested?.n ?? 0,
+    archived: archived?.n ?? 0,
   };
 }
 
@@ -379,7 +450,7 @@ export async function getPostRow(
   id: number,
 ): Promise<PostDetail | null> {
   const row = await env.DB.prepare(
-    `SELECT ${SELECT_SUMMARY}, r2_key FROM posts WHERE id = ?`,
+    `SELECT ${SELECT_SUMMARY}, posts.r2_key ${FROM_POSTS} WHERE posts.id = ?`,
   )
     .bind(id)
     .first<SummaryRow & { r2_key: string | null }>();
@@ -400,4 +471,92 @@ export async function getPostRow(
     ...toSummary(row),
     body,
   };
+}
+
+export async function setReaction(
+  db: D1Database,
+  postId: number,
+  kind: ReactionKind,
+): Promise<boolean> {
+  const existing = await db
+    .prepare("SELECT id FROM posts WHERE id = ?")
+    .bind(postId)
+    .first<{ id: number }>();
+  if (!existing) {
+    return false;
+  }
+  await db
+    .prepare(
+      `INSERT INTO reactions (post_id, kind, created_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(post_id) DO UPDATE SET
+         kind = excluded.kind,
+         created_at = excluded.created_at`,
+    )
+    .bind(postId, kind, Date.now())
+    .run();
+  return true;
+}
+
+export async function clearReaction(
+  db: D1Database,
+  postId: number,
+): Promise<boolean> {
+  const result = await db
+    .prepare("DELETE FROM reactions WHERE post_id = ?")
+    .bind(postId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function loadPreferenceSignals(
+  db: D1Database,
+  similarIds: number[] = [],
+): Promise<PreferenceSignals> {
+  const rows = await db
+    .prepare(
+      `SELECT reactions.kind AS kind, posts.site AS site, posts.topic AS topic,
+              posts.content_type AS content_type
+       FROM reactions
+       JOIN posts ON posts.id = reactions.post_id`,
+    )
+    .all<{
+      kind: ReactionKind;
+      site: string;
+      topic: Topic;
+      content_type: ContentType;
+    }>();
+  const mapped = (rows.results ?? []).map((row) => ({
+    kind: row.kind,
+    site: row.site,
+    topic: row.topic,
+    contentType: row.content_type,
+  }));
+  if (mapped.length === 0 && similarIds.length === 0) {
+    return EMPTY_SIGNALS;
+  }
+  return signalsFromReactions(mapped, similarIds);
+}
+
+export async function likedPostTexts(
+  db: D1Database,
+  limit = 8,
+): Promise<Array<{ id: number; title: string; excerpt: string }>> {
+  const rows = await db
+    .prepare(
+      `SELECT posts.id AS id, posts.title AS title, posts.excerpt AS excerpt
+       FROM reactions
+       JOIN posts ON posts.id = reactions.post_id
+       WHERE reactions.kind = 'like'
+       ORDER BY reactions.created_at DESC
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all<{ id: number; title: string; excerpt: string }>();
+  return rows.results ?? [];
+}
+
+export async function avoidedSiteSet(db: D1Database): Promise<Set<string>> {
+  const signals = await loadPreferenceSignals(db);
+  return avoidedDomains(signals);
 }

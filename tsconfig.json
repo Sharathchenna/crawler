@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "worker", "public/sw.js", "public/swe-worker*"]
+  "exclude": ["node_modules", "worker", "public/sw.js", "public/swe-worker*", "**/*.test.ts"]
 }

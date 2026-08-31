@@ -7,6 +7,8 @@ Two shelves:
 - **Yours** — anything you paste (tweet, paper, blog, repo).
 - **Suggested** — what the crawler found in the last **7 days**: recent Hacker News, new arXiv papers, and company / personal longform via TinyFish. Ranked as a mix, not all-time HN classics.
 
+Like, pass, or mark a card **read** and it leaves those shelves for **Archive**, so they stay unread. Likes and passes also steer Suggested ranking (site / topic / type, plus Vectorize similarity when AI is bound). Passes stop the crawler from refetching that domain.
+
 Live: [crawler.sharathchenna87.workers.dev](https://crawler.sharathchenna87.workers.dev) (Cloudflare Access) talking to [parchment-crawler](https://parchment-crawler.sharathchenna87.workers.dev).
 
 ## How it is put together
@@ -63,7 +65,7 @@ Discover (cron or **Find more**) prunes Suggested older than 7 days, then enqueu
 
 Search tries Vectorize (`@cf/baai/bge-base-en-v1.5`, 768d) and falls back to SQL `LIKE` if AI / Vectorize is missing.
 
-Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `GET /health`.
+Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `POST /api/react`, `DELETE /api/react`, `GET /health`.
 
 ## Layout
 

@@ -1,4 +1,5 @@
 import { PostList } from "@/components/post-list";
+import { ReactionChips } from "@/components/reaction-chips";
 import { SaveForm } from "@/components/save-form";
 import { SearchForm } from "@/components/search-form";
 import { TypeChips } from "@/components/type-chips";
@@ -6,10 +7,11 @@ import {
   listPosts,
   parseOriginParam,
   parseQueryParam,
+  parseReactionParam,
   parseTypeParam,
   searchPosts,
 } from "@/lib/posts";
-import { CONTENT_TYPE_LABELS, ORIGIN_LABELS } from "@/shared/types";
+import { CONTENT_TYPE_LABELS, ORIGIN_LABELS, REACTION_LABELS } from "@/shared/types";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -22,26 +24,39 @@ export default async function SearchPage({
     type?: string | string[];
     topic?: string | string[];
     origin?: string | string[];
+    reaction?: string | string[];
   }>;
 }) {
   const params = await searchParams;
   const query = parseQueryParam(params.q);
   const contentType = parseTypeParam(params.type);
   const origin = parseOriginParam(params.origin);
+  const reaction = parseReactionParam(params.reaction);
   const posts =
-    query || contentType
-      ? await searchPosts(query, { contentType, origin })
+    query || contentType || reaction
+      ? await searchPosts(query, { contentType, origin, reaction })
       : await listPosts({ origin, limit: 48 });
 
   const heading = query
     ? `Results for “${query}”`
     : origin && contentType
       ? `${ORIGIN_LABELS[origin]} · ${CONTENT_TYPE_LABELS[contentType]}`
-      : origin
-        ? ORIGIN_LABELS[origin]
-        : contentType
-          ? CONTENT_TYPE_LABELS[contentType]
-          : "Search the library";
+      : origin && reaction
+        ? `${ORIGIN_LABELS[origin]} · ${REACTION_LABELS[reaction]}`
+        : origin
+          ? ORIGIN_LABELS[origin]
+          : contentType
+            ? CONTENT_TYPE_LABELS[contentType]
+            : "Search the library";
+
+  const empty =
+    origin === "saved"
+      ? "Nothing in Yours yet. Paste a URL above."
+      : origin === "suggested"
+        ? "No suggestions yet. Use Find more on the index."
+        : origin === "archived"
+          ? "Archive is empty. Like, pass, or mark a link read and it lands here."
+          : "Nothing on this shelf yet.";
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 py-12 sm:px-8 sm:py-16">
@@ -61,26 +76,43 @@ export default async function SearchPage({
           <SaveForm />
         </div>
       ) : null}
+      {origin === "archived" && !query ? (
+        <p className="mt-6 max-w-xl text-sm text-muted">
+          Anything you like, pass, or mark read leaves the live shelves so they
+          stay new. Restore a card to put it back.
+        </p>
+      ) : null}
       <div className="mt-8 max-w-2xl">
         <SearchForm
           defaultQuery={query}
           defaultType={contentType}
           defaultOrigin={origin}
+          defaultReaction={reaction}
         />
       </div>
       <div className="mt-6">
-        <TypeChips active={contentType} query={query} origin={origin} />
+        <TypeChips
+          active={contentType}
+          query={query}
+          origin={origin}
+          reaction={reaction}
+        />
       </div>
+      {origin === "archived" ? (
+        <div className="mt-4">
+          <ReactionChips
+            active={reaction}
+            query={query}
+            origin={origin}
+            type={contentType}
+          />
+        </div>
+      ) : null}
       <section className="mt-14">
         <PostList
           posts={posts}
-          empty={
-            origin === "saved"
-              ? "Nothing in Yours yet. Paste a URL above."
-              : origin === "suggested"
-                ? "No suggestions yet. Use Find more on the index."
-                : "Nothing on this shelf yet."
-          }
+          empty={empty}
+          shelf={origin === "archived" ? "archive" : "live"}
         />
       </section>
     </main>
