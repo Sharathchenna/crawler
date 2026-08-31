@@ -51,11 +51,11 @@ Already wired in this repo: D1 `parchment`, R2 `parchment-posts`, queue `parchme
 bunx wrangler secret put TINYFISH_API_KEY --config worker/wrangler.jsonc
 bun run db:migrate
 bun run deploy:crawler
-bun run build:vinext
+bun run build
 bun run deploy:vinext
 ```
 
-Root `wrangler.jsonc` sets `CRAWLER_ORIGIN` and the `CRAWLER` service binding to `parchment-crawler`. Do not skip `build:vinext` — `deploy:vinext` ships `dist/`.
+Root `wrangler.jsonc` sets `CRAWLER_ORIGIN`, the `CRAWLER` service binding to `parchment-crawler`, and `preview_urls`. `bun run build` is vinext: it writes `dist/` and `.wrangler/deploy/config.json` so Workers Builds can run `npx wrangler versions upload` on PRs. `bun run build:next` is webpack.
 
 On a new Cloudflare account, create those resources first, paste IDs into `worker/wrangler.jsonc` and `wrangler.jsonc`, then deploy crawler before the PWA.
 
