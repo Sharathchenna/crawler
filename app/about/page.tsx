@@ -33,8 +33,15 @@ export default function AboutPage() {
         </p>
         <p>
           {APP_NAME} does not replace the source. Tweets are stored as links
-          (no X API). Papers keep the abstract. Search is keyword today;
-          embeddings + Vectorize turn on after Cloudflare login.
+          (no X API). Import X bookmarks from{" "}
+          <a href="https://birdclaw.sh/">birdclaw</a> JSON, JSONL, or a list of
+          tweet URLs — birdclaw stays local; Parchment only receives what you
+          paste. Papers keep the abstract. Search is keyword today; embeddings +
+          Vectorize turn on after Cloudflare login.
+        </p>
+        <p>
+          Light is cream paper. Dark is ink. Theme lives in the sidebar and
+          follows your system until you pin one.
         </p>
       </div>
     </main>

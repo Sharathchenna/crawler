@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CONTENT_TYPE_LABELS, CONTENT_TYPES } from "@/shared/types";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function navClass(active: boolean) {
   return `block rounded-md px-3 py-2 text-sm no-underline transition-colors ${
@@ -120,6 +121,10 @@ function SidebarBody({
           </Link>
         ))}
       </nav>
+
+      <div className="mt-auto pt-10">
+        <ThemeToggle />
+      </div>
     </div>
   );
 }

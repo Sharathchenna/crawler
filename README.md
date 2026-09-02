@@ -9,6 +9,8 @@ Two shelves:
 
 Like, pass, or mark a card **read** and it leaves those shelves for **Archive**, so they stay unread. Likes and passes also steer Suggested ranking (site / topic / type, plus Vectorize similarity when AI is bound). Passes stop the crawler from refetching that domain.
 
+Import X bookmarks from [birdclaw](https://birdclaw.sh/) (`birdclaw search tweets --bookmarked --json`) into Yours. Light / dark / system theme is in the sidebar.
+
 Live: [crawler.sharathchenna87.workers.dev](https://crawler.sharathchenna87.workers.dev) (Cloudflare Access) talking to [parchment-crawler](https://parchment-crawler.sharathchenna87.workers.dev).
 
 ## How it is put together
@@ -65,7 +67,7 @@ Discover (cron or **Find more**) prunes Suggested older than 7 days, then enqueu
 
 Search tries Vectorize (`@cf/baai/bge-base-en-v1.5`, 768d) and falls back to SQL `LIKE` if AI / Vectorize is missing.
 
-Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/discover`, `POST /api/react`, `DELETE /api/react`, `GET /health`.
+Crawler HTTP (CORS open): `GET /api/posts`, `GET /api/search`, `GET /api/stats`, `POST /api/save`, `POST /api/import`, `POST /api/discover`, `POST /api/react`, `DELETE /api/react`, `GET /health`.
 
 ## Layout
 

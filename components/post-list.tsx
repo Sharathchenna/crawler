@@ -20,7 +20,7 @@ function Cover({ post }: { post: PostSummary }) {
 
   if (post.contentType === "paper") {
     return (
-      <div className="flex h-full flex-col bg-[#f7f1e4] px-5 py-4">
+      <div className="flex h-full flex-col bg-paper-deep px-5 py-4">
         <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-terracotta">
           Abstract
         </p>

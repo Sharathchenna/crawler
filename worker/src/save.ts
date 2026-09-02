@@ -1,3 +1,4 @@
+import { extractBookmarkImports, type BookmarkImport } from "../../shared/birdclaw";
 import { classifyUrl, tweetTitleFromUrl } from "../../shared/classify";
 import { fetchTweetPreview, tweetEmbedImageUrl } from "../../shared/tweet";
 import type { ContentType, SourceKind } from "../../shared/types";
@@ -29,6 +30,7 @@ export async function saveLink(
     publishedAt?: number | null;
     score?: number;
     fetch?: boolean;
+    preview?: boolean;
   },
 ): Promise<{ id: number; created: boolean }> {
   const canonical = canonicalize(input.url);
@@ -40,7 +42,9 @@ export async function saveLink(
   const contentType = input.contentType ?? classifyUrl(canonical, input.discoveredVia);
   const site = hostnameOf(canonical);
   const tweet =
-    contentType === "tweet" ? await fetchTweetPreview(canonical) : null;
+    contentType === "tweet" && input.preview !== false
+      ? await fetchTweetPreview(canonical)
+      : null;
   const title =
     input.title?.trim() ||
     (tweet
@@ -122,4 +126,58 @@ export async function saveFromFetch(
     contentType,
     fetch: false,
   });
+}
+
+const IMPORT_LIMIT = 80;
+
+export async function saveImported(
+  env: Env,
+  input: { text?: string; items?: BookmarkImport[] },
+): Promise<{
+  saved: number;
+  skipped: number;
+  failed: number;
+  total: number;
+}> {
+  const parsed = [
+    ...(input.items ?? []),
+    ...(input.text ? extractBookmarkImports(input.text) : []),
+  ];
+  const unique = new Map<string, BookmarkImport>();
+  for (const item of parsed) {
+    const canonical = canonicalize(item.url);
+    if (!canonical) {
+      continue;
+    }
+    if (!unique.has(canonical)) {
+      unique.set(canonical, { ...item, url: canonical });
+    }
+  }
+  const batch = [...unique.values()].slice(0, IMPORT_LIMIT);
+  let saved = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const item of batch) {
+    try {
+      const existing = await findByCanonical(env.DB, item.url);
+      const result = await saveLink(env, {
+        url: item.url,
+        title: item.title,
+        excerpt: item.excerpt,
+        publishedAt: item.publishedAt,
+        discoveredVia: "saved",
+        contentType: "tweet",
+        fetch: false,
+        preview: !item.excerpt,
+      });
+      if (existing || !result.created) {
+        skipped += 1;
+      } else {
+        saved += 1;
+      }
+    } catch {
+      failed += 1;
+    }
+  }
+  return { saved, skipped, failed, total: batch.length };
 }

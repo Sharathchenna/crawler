@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { SiteShell } from "@/components/site-shell";
-import { APP_DESCRIPTION, APP_NAME, THEME_COLOR } from "@/lib/config";
+import { ThemeProvider } from "@/components/theme-provider";
+import { APP_DESCRIPTION, APP_NAME, DARK_THEME_COLOR, THEME_COLOR } from "@/lib/config";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,8 +36,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: THEME_COLOR,
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: DARK_THEME_COLOR },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -46,7 +51,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${inter.className} h-full antialiased`}>
       <body className="min-h-full bg-paper font-sans text-ink">
-        <SiteShell>{children}</SiteShell>
+        <Script id="parchment-theme" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("parchment-theme");var d=t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark";}}catch(e){}})();`}
+        </Script>
+        <ThemeProvider>
+          <SiteShell>{children}</SiteShell>
+        </ThemeProvider>
       </body>
     </html>
   );

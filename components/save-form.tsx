@@ -62,7 +62,7 @@ export function SaveForm() {
         <select
           name="type"
           defaultValue=""
-          className="border-0 border-b border-rule bg-transparent pb-2 text-sm text-muted outline-none focus:border-terracotta"
+          className="border-0 border-b border-rule bg-paper pb-2 text-sm text-muted outline-none focus:border-terracotta"
         >
           <option value="">Auto-detect shelf</option>
           {CONTENT_TYPES.map((type) => (

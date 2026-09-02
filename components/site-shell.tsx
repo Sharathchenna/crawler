@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SidebarNav, SidebarNavFallback } from "@/components/site-sidebar";
 import { SiteFooter } from "@/components/site-footer";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
@@ -69,16 +70,19 @@ export function SiteShell({ children }: { children: ReactNode }) {
           <Link href="/" className="text-lg font-semibold tracking-tight text-ink no-underline">
             Parchment
           </Link>
-          <button
-            type="button"
-            className="text-ink"
-            aria-expanded={open}
-            aria-controls="mobile-sidebar"
-            onClick={() => setOpen((value) => !value)}
-          >
-            <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
-            <MenuIcon open={open} />
-          </button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle compact />
+            <button
+              type="button"
+              className="text-ink"
+              aria-expanded={open}
+              aria-controls="mobile-sidebar"
+              onClick={() => setOpen((value) => !value)}
+            >
+              <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+              <MenuIcon open={open} />
+            </button>
+          </div>
         </header>
 
         {open ? (

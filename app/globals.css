@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --paper: #f4ede0;
   --parchment: #e8dcc8;
   --ink: #2c2416;
@@ -8,6 +9,17 @@
   --terracotta: #b85c38;
   --rule: #d4c4a8;
   --paper-deep: #ebe1d0;
+}
+
+html.dark {
+  color-scheme: dark;
+  --paper: #1c1814;
+  --parchment: #2a241c;
+  --ink: #f4ede0;
+  --muted: #b8a894;
+  --terracotta: #e08a62;
+  --rule: #3d3428;
+  --paper-deep: #14110e;
 }
 
 @theme inline {
@@ -38,6 +50,13 @@ body {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
   color: var(--ink);
   font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(ellipse at 12% -10%, rgb(224 138 98 / 0.12), transparent 46%),
+    radial-gradient(ellipse at 110% 0%, rgb(244 237 224 / 0.04), transparent 42%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
 }
 
 a {
@@ -82,6 +101,10 @@ a {
   background: rgb(44 36 22 / 0.06);
   padding: 0.1em 0.35em;
   border-radius: 3px;
+}
+
+html.dark .prose-parchment code {
+  background: rgb(244 237 224 / 0.08);
 }
 
 .prose-parchment pre {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { tweetStatusId } from "@/shared/tweet";
+import { useTheme } from "@/components/theme-provider";
 
 type TweetFactory = {
   createTweet: (
@@ -79,6 +80,7 @@ function loadTwitterWidgets(): Promise<TweetFactory> {
 export function TweetEmbed({ url }: { url: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  const { resolved } = useTheme();
   const id = tweetStatusId(url);
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export function TweetEmbed({ url }: { url: string }) {
           return undefined;
         }
         return widgets.createTweet(id, host, {
-          theme: "light",
+          theme: resolved,
           dnt: true,
           conversation: "none",
           align: "center",
@@ -116,7 +118,7 @@ export function TweetEmbed({ url }: { url: string }) {
       cancelled = true;
       host.replaceChildren();
     };
-  }, [id]);
+  }, [id, resolved]);
 
   if (!id || failed) {
     return (

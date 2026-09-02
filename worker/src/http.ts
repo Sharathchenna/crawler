@@ -17,7 +17,7 @@ import {
 import { discover } from "./discover";
 import { postsByIds, semanticIds, similarToLikes } from "./embeddings";
 import type { Env } from "./env";
-import { saveFromFetch, saveLink } from "./save";
+import { saveFromFetch, saveImported, saveLink } from "./save";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -199,6 +199,45 @@ export async function handleRequest(
       return json({ error: "not_found" }, 404);
     }
     return json(post);
+  }
+
+  if (path === "/api/import" && request.method === "POST") {
+    let payload: { text?: string; items?: unknown } = {};
+    try {
+      payload = (await request.json()) as { text?: string; items?: unknown };
+    } catch {
+      return json({ error: "invalid_json" }, 400);
+    }
+    const text = typeof payload.text === "string" ? payload.text : "";
+    const items = Array.isArray(payload.items)
+      ? payload.items.flatMap((row) => {
+          const record =
+            row && typeof row === "object" ? (row as Record<string, unknown>) : null;
+          const url = typeof record?.url === "string" ? record.url : "";
+          if (!record || !url) {
+            return [];
+          }
+          return [
+            {
+              url,
+              title: typeof record.title === "string" ? record.title : undefined,
+              excerpt: typeof record.excerpt === "string" ? record.excerpt : undefined,
+              publishedAt:
+                typeof record.publishedAt === "number" ? record.publishedAt : null,
+            },
+          ];
+        })
+      : [];
+    if (!text.trim() && items.length === 0) {
+      return json({ error: "bookmarks_required" }, 400);
+    }
+    try {
+      const result = await saveImported(env, { text, items });
+      return json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "import_failed";
+      return json({ error: message }, 400);
+    }
   }
 
   if (path === "/api/discover" && request.method === "POST") {

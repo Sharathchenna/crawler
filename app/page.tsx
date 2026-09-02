@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DiscoverButton } from "@/components/discover-button";
+import { ImportBookmarks } from "@/components/import-bookmarks";
 import { PostList } from "@/components/post-list";
 import { SaveForm } from "@/components/save-form";
 import { SearchForm } from "@/components/search-form";
@@ -42,7 +43,11 @@ export default async function HomePage() {
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted">
               Paste a URL you found interesting. Tweets, papers, anything. Mark
-              it read when you are done.
+              it read when you are done. Import X bookmarks from{" "}
+              <a href="https://birdclaw.sh/" className="text-terracotta">
+                birdclaw
+              </a>
+              .
             </p>
           </div>
           <Link
@@ -54,6 +59,7 @@ export default async function HomePage() {
         </div>
         <div className="mb-8 max-w-2xl">
           <SaveForm />
+          <ImportBookmarks />
         </div>
         <PostList
           posts={yours}
