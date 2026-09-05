@@ -72,10 +72,12 @@ function prompt(question) {
 }
 
 function parseFlags(args) {
-  const out = { apiUrl: null, rest: [] };
+  const out = { apiUrl: null, type: null, rest: [] };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--api-url" && args[i + 1]) {
       out.apiUrl = args[++i];
+    } else if ((args[i] === "--type" || args[i] === "-t") && args[i + 1]) {
+      out.type = args[++i];
     } else {
       out.rest.push(args[i]);
     }
@@ -94,7 +96,7 @@ if (!cmd || cmd === "help" || cmd === "--help") {
 
 Usage:
   hoard login <client> [--api-url URL]     Connect (paste a token from Settings → Tokens)
-  hoard search "<query>"                   Search notes + items
+  hoard search "<query>" [--type x|repo|page|note]   Search notes + items
   hoard save <url>                         Capture a URL
   hoard export [dir]                       Export everything as .md files
 `);
@@ -143,21 +145,24 @@ if (cmd === "login") {
 }
 
 if (cmd === "search") {
-  const { apiUrl, rest } = parseFlags(rawArgs);
+  const { apiUrl, type, rest } = parseFlags(rawArgs);
   const cfg = await loadConfig();
   if (apiUrl) cfg.apiUrl = apiUrl;
   needToken(cfg);
   const q = rest.join(" ");
   if (!q) {
-    console.error('Usage: hoard search "<query>"');
+    console.error('Usage: hoard search "<query>" [--type x|repo|page|note]');
     process.exit(1);
   }
-  const hits = await api(cfg, `/api/search?q=${encodeURIComponent(q)}`);
+  const params = new URLSearchParams({ q });
+  if (type) params.set("type", type);
+  const hits = await api(cfg, `/api/search?${params}`);
   const notes = hits.filter((h) => h.kind === "note");
   const items = hits.filter((h) => h.kind === "item");
   console.log(`${notes.length} notes · ${items.length} items`);
   for (const h of hits) {
-    console.log(`- [${h.kind}] ${h.title} (${h.id})`);
+    const via = h.via && h.via !== "keyword" ? ` ~${h.via}` : "";
+    console.log(`- [${h.kind}] ${h.title} (${h.id})${via}`);
     if (h.snippet) console.log(`    ${h.snippet.slice(0, 140)}`);
   }
   process.exit(0);

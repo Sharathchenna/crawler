@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { domainOf } from "@/components/Shell";
+import { DeleteButton } from "@/components/DeleteButton";
 import { apiJson } from "@/components/api";
 
 export type ReaderItem = {
@@ -84,6 +85,12 @@ export function ItemReader({ initialItem, initialHtml }: { initialItem: ReaderIt
     router.push("/library");
   }
 
+  async function remove() {
+    await fetch(`/api/items/${item.id}`, { method: "DELETE" });
+    window.dispatchEvent(new Event("hoard:items-changed"));
+    router.push("/library");
+  }
+
   const activeView = view ?? (item.extractionError ? "original" : "reader");
   const published = formatDate(item.publishedAt);
   const extracted = formatDate(item.extractedAt);
@@ -139,6 +146,7 @@ export function ItemReader({ initialItem, initialHtml }: { initialItem: ReaderIt
         )}
         <button onClick={() => setStatus("archived")} className="rounded-[6px] px-2 py-1 font-mono text-[11px] text-[var(--text-faint)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-body)]">Archive</button>
         <button onClick={() => setStatus("done")} className="rounded-[6px] px-2 py-1 font-mono text-[11px] text-[var(--text-faint)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-body)]">Done</button>
+        <DeleteButton label={item.title} onDelete={remove} />
       </div>
 
       <div aria-live="polite" className="mt-2 font-mono text-[11px] text-[var(--text-muted)]">

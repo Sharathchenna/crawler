@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { apiJson } from "@/components/api";
+import { DeleteButton } from "@/components/DeleteButton";
 
 type Revision = { version: number; author: string; summary: string; createdAt: string };
 type Note = {
@@ -17,6 +18,7 @@ type Note = {
 
 export default function NoteEditorPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [note, setNote] = useState<Note | null>(null);
   const [draft, setDraft] = useState("");
   const [summary, setSummary] = useState("");
@@ -57,6 +59,11 @@ export default function NoteEditorPage() {
     setStatus(`Saved v${data.revisions.length}`);
   }
 
+  async function remove() {
+    await fetch(`/api/notes/${id}`, { method: "DELETE" });
+    router.push("/notes");
+  }
+
   if (error) return <p role="alert" className="text-[13px] text-[var(--red)]">{error}</p>;
   if (!note) return <p className="font-mono text-[12px] text-[var(--text-faint)]">Loading…</p>;
 
@@ -86,6 +93,7 @@ export default function NoteEditorPage() {
         >
           Save
         </button>
+        <DeleteButton label={note.title} onDelete={remove} />
       </div>
       <div aria-live="polite" className="mb-2 font-mono text-[11px] text-[var(--green)]">{status}</div>
       {preview ? (

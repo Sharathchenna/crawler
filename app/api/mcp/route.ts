@@ -10,12 +10,13 @@ const SERVER = { name: "hoard", version: "0.1.0" };
 const TOOLS = [
   {
     name: "search_items",
-    description: "Keyword-search saved items and notes. Returns Markdown-ready hits.",
+    description: "Search saved items and notes (keyword + fuzzy + semantic). Returns Markdown-ready hits.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: "Search query" },
         limit: { type: "number", description: "Max results (default 10)" },
+        type: { type: "string", description: "Optional filter: note, x, repo, page, pdf, video, audio, file" },
       },
       required: ["query"],
     },
@@ -112,7 +113,9 @@ async function handleOne(body: RpcReq, req: Request) {
         case "search_items": {
           const query = String(args.query ?? "");
           const limit = Number(args.limit ?? 10) || 10;
-          const hits = await searchAll(user.id, query, Math.min(limit, 30));
+          const typeArg = String(args.type ?? "").trim().toLowerCase();
+          const types = typeArg ? [typeArg] : [];
+          const hits = await searchAll(user.id, query, Math.min(limit, 30), types);
           const md =
             hits.length === 0
               ? `No matches for "${query}".`

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TypeIcon, domainOf, timeAgo } from "@/components/Shell";
+import { DeleteButton } from "@/components/DeleteButton";
 
 type Item = {
   id: string;
@@ -15,15 +16,26 @@ type Item = {
   tags: string[];
 };
 
-export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; emptyHint: string }) {
+export function ItemList({
+  statusFilter,
+  typeFilter,
+  emptyHint,
+}: {
+  statusFilter?: string;
+  typeFilter?: string;
+  emptyHint: string;
+}) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
     setLoading(true);
     try {
-      const q = statusFilter ? `?status=${statusFilter}` : "";
-      const res = await fetch(`/api/items${q}`);
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      if (typeFilter) params.set("type", typeFilter);
+      const qs = params.size ? `?${params}` : "";
+      const res = await fetch(`/api/items${qs}`);
       const data: unknown = await res.json();
       const list: Item[] = Array.isArray(data) ? data : [];
       setItems(statusFilter ? list : list.filter((i) => i.status !== "archived"));
@@ -42,7 +54,7 @@ export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; e
     window.addEventListener("hoard:items-changed", onChange);
     return () => window.removeEventListener("hoard:items-changed", onChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, typeFilter]);
 
   async function setStatus(id: string, status: string) {
     await fetch(`/api/items/${id}`, {
@@ -50,6 +62,11 @@ export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; e
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    load();
+  }
+
+  async function remove(id: string) {
+    await fetch(`/api/items/${id}`, { method: "DELETE" });
     load();
   }
 
@@ -112,6 +129,7 @@ export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; e
             >
               Archive
             </button>
+            <DeleteButton label={it.title} onDelete={() => remove(it.id)} />
           </div>
         </li>
       ))}

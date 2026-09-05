@@ -9,6 +9,9 @@ const NAV = [
   { href: "/library", label: "Library", icon: "▤" },
   { href: "/inbox", label: "Inbox", icon: "◉" },
   { href: "/notes", label: "Notes", icon: "✎" },
+  { href: "/repos", label: "Repos", icon: "⎇" },
+  { href: "/tweets", label: "Tweets", icon: "✕" },
+  { href: "/articles", label: "Articles", icon: "◱" },
   { href: "/search", label: "Search", icon: "⌕" },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
@@ -336,6 +339,7 @@ export function TypeIcon({ type }: { type: string }) {
     page: "◱",
     pdf: "▤",
     x: "✕",
+    repo: "⎇",
     video: "▶",
     audio: "♪",
     file: "❏",

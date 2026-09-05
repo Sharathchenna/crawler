@@ -13,6 +13,8 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [mcpName, setMcpName] = useState("hoard");
   const [origin, setOrigin] = useState("");
+  const [reindexMsg, setReindexMsg] = useState<string | null>(null);
+  const [reindexBusy, setReindexBusy] = useState(false);
 
   async function load() {
     const res = await fetch("/api/tokens");
@@ -40,6 +42,20 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function reindex() {
+    setReindexBusy(true);
+    setReindexMsg("Indexing…");
+    try {
+      const res = await fetch("/api/reindex", { method: "POST" });
+      const data = await apiJson<{ message?: string }>(res);
+      setReindexMsg(data.message ?? "Done.");
+    } catch {
+      setReindexMsg("Couldn't reach the server. Try again.");
+    } finally {
+      setReindexBusy(false);
+    }
   }
 
   const mcpUrl = `${origin}/api/mcp`;
@@ -83,6 +99,24 @@ export default function SettingsPage() {
           ))}
           {!tokens.length && <li className="font-mono text-[11px] text-[var(--text-faint)]">No tokens yet.</li>}
         </ul>
+      </section>
+
+      <section className="elevated rounded-[10px] p-4">
+        <h2 className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--text)]">Semantic search index</h2>
+        <p className="mt-1 text-[13px] text-[var(--text-muted)]">
+          New saves index automatically. Rebuild here after importing, or if results feel stale.
+          Needs the Vectorize index (otherwise keyword + fuzzy search carry on).
+        </p>
+        <button
+          onClick={reindex}
+          disabled={reindexBusy}
+          className="mt-3 rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-[13px] font-medium text-[var(--text-body)] hover:bg-[var(--bg-hover)] disabled:opacity-50"
+        >
+          {reindexBusy ? "Indexing…" : "Rebuild index"}
+        </button>
+        {reindexMsg && (
+          <p aria-live="polite" className="mt-2 font-mono text-[11px] text-[var(--text-faint)]">{reindexMsg}</p>
+        )}
       </section>
 
       <section className="elevated rounded-[10px] p-4">

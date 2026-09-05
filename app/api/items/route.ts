@@ -9,8 +9,17 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first — your library is private to you." }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
+  const types = (searchParams.get("type") ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 8);
   const items = await getDb().item.findMany({
-    where: { userId: user.id, ...(status && VALID_STATUS.has(status) ? { status } : {}) },
+    where: {
+      userId: user.id,
+      ...(status && VALID_STATUS.has(status) ? { status } : {}),
+      ...(types.length ? { type: { in: types } } : {}),
+    },
     include: { tags: { include: { tag: true } } },
     orderBy: { createdAt: "desc" },
     take: 200,

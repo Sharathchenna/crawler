@@ -21,9 +21,21 @@ function detectType(url: string): string {
   if (u.includes("youtube.com") || u.includes("youtu.be")) return "video";
   if (u.endsWith(".pdf")) return "pdf";
   if (u.includes("x.com") || u.includes("twitter.com")) return "x";
+  if (isGitHubRepo(url)) return "repo";
   if (u.match(/\.(mp3|wav|m4a|ogg|flac)($|\?)/)) return "audio";
   if (u.match(/\.(png|jpe?g|gif|webp|svg)($|\?)/)) return "file";
   return "page";
+}
+
+/** github.com/<owner>/<repo>[…] — profiles, gists and hubs stay pages. */
+function isGitHubRepo(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.replace(/^www\./, "") !== "github.com") return false;
+    return parsed.pathname.split("/").filter(Boolean).length >= 2;
+  } catch {
+    return false;
+  }
 }
 
 function domainOf(url: string): string {

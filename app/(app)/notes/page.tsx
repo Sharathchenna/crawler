@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/components/Shell";
 import { apiJson } from "@/components/api";
+import { DeleteButton } from "@/components/DeleteButton";
 
 type Note = {
   id: string;
@@ -58,14 +59,25 @@ export default function NotesPage() {
       </form>
       <ul className="overflow-hidden rounded-[10px] border border-[var(--border-soft)] bg-[var(--bg-raised)]" style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}>
         {notes.map((n, idx) => (
-          <li key={n.id} className={`px-3 py-2.5 hover:bg-[var(--bg-hover)] ${idx !== notes.length - 1 ? "border-b border-[var(--border-soft)]" : ""}`}>
-            <Link href={`/notes/${n.id}`} className="block truncate text-[13px] font-medium text-[var(--text)] hover:underline">
-              {n.title}
-            </Link>
-            <p className="mt-0.5 font-mono text-[11px] text-[var(--text-faint)]">
-              {n.project && `${n.project} · `}{timeAgo(n.updatedAt)}
-              {n._count && ` · v${n._count.revisions} · ${n._count.sources} sources`}
-            </p>
+          <li key={n.id} className={`group flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--bg-hover)] ${idx !== notes.length - 1 ? "border-b border-[var(--border-soft)]" : ""}`}>
+            <div className="min-w-0 flex-1">
+              <Link href={`/notes/${n.id}`} className="block truncate text-[13px] font-medium text-[var(--text)] hover:underline">
+                {n.title}
+              </Link>
+              <p className="mt-0.5 font-mono text-[11px] text-[var(--text-faint)]">
+                {n.project && `${n.project} · `}{timeAgo(n.updatedAt)}
+                {n._count && ` · v${n._count.revisions} · ${n._count.sources} sources`}
+              </p>
+            </div>
+            <div className="shrink-0 opacity-0 focus-within:opacity-100 group-hover:opacity-100">
+              <DeleteButton
+                label={n.title}
+                onDelete={async () => {
+                  await fetch(`/api/notes/${n.id}`, { method: "DELETE" });
+                  load();
+                }}
+              />
+            </div>
           </li>
         ))}
         {!notes.length && (

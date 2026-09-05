@@ -4,7 +4,8 @@ A personal library that saves web pages, X threads, PDFs, images, audio, and You
 
 Runs on **Cloudflare Workers** (Next.js via OpenNext, Prisma + D1, auth with WebCrypto — no Node-only APIs).
 
-- Web app: auth, capture bar, Library, Inbox, reader, notes editor with revisions, search, settings/tokens.
+- Web app: auth, capture bar, Library, Inbox, Notes, Repos, Tweets, Articles, reader,
+  notes editor with revisions, search (keyword + fuzzy + semantic), settings/tokens.
 - Backend: Next.js 15 route handlers + Prisma over **D1** (per-request clients, no global connection).
 - MCP server: `POST /api/mcp` (JSON-RPC 2.0 / streamable HTTP).
 - CLI: `hoard login|search|save|export` (points at any deployment via `--api-url`).
@@ -73,6 +74,45 @@ There are no passwords. An Access application must front the hostname:
 
 Without a valid JWT/bearer (and without `DEV_ACCESS_EMAIL`, local only),
 every API call 401s and app pages 404 — fail-closed by design.
+
+## Sections
+
+The sidebar curates the library into sections — no manual filing needed,
+capture auto-classifies by URL and type:
+
+- **Repos** (`/repos`) — `github.com/<owner>/<repo>` links, detected at capture.
+- **Tweets** (`/tweets`) — X posts and threads (`type: x`).
+- **Articles** (`/articles`) — pages + PDFs.
+- Notes keep their own page; Library stays the full firehose.
+
+Filter programmatically with `GET /api/items?type=x,repo` and
+`GET /api/search?q=…&type=…`, `hoard search "…" --type …`, or MCP
+`search_items(query, type?)`.
+
+## Search
+
+Three engines merge per query (each hit carries a `via` tag, additive):
+
+1. **Keyword** — every term must appear (AND) across title/body/excerpt.
+2. **Semantic** — Workers AI embeddings (`bge-small`) + Vectorize, owner-scoped.
+   Needs one-time setup (see below); absent → skipped silently.
+3. **Fuzzy** — typo-tolerant match on titles + excerpts (Fuse.js), capped extras.
+
+The `/search` page adds scope chips (All, Notes, Tweets, Repos, Articles)
+hitting the same `type` filter.
+
+### Enabling semantic search
+
+```bash
+# 1. Create the index (384 dims = bge-small, cosine)
+npx wrangler vectorize create hoard-embeddings --dimensions=384 --metric=cosine
+# 2. Token needs Workers AI (run) + Vectorize (read + write):
+#    CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (env / secrets)
+# 3. Backfill: Settings → Rebuild index (or POST /api/reindex)
+```
+
+New saves index automatically; deletes unindex. Without credentials the
+whole layer is inert — keyword + fuzzy carry on, `/api/reindex` says so.
 
 ## Tokens + MCP
 

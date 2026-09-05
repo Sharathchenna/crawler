@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { indexDoc, unindexDoc } from "@/lib/embeddings";
 
 const VALID_STATUS = new Set(["inbox", "saved", "archived", "done"]);
 
@@ -40,6 +41,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       ...(body.status ? { status: body.status } : {}),
     },
   });
+  await indexDoc({
+    id: updated.id, title: updated.title, excerpt: updated.excerpt,
+    userId: user.id, kind: "item", type: updated.type,
+  });
   return NextResponse.json(updated);
 }
 
@@ -50,5 +55,6 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const existing = await owned(user.id, id);
   if (!existing) return NextResponse.json({ error: "Couldn't find that item. It may already be deleted." }, { status: 404 });
   await getDb().item.delete({ where: { id } });
+  await unindexDoc(id);
   return NextResponse.json({ ok: true });
 }

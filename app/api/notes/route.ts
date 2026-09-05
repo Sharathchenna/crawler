@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { indexDoc } from "@/lib/embeddings";
 
 export async function GET(req: Request) {
   const user = await requireUser(req);
@@ -35,6 +36,10 @@ export async function POST(req: Request) {
       revisions: { create: [{ version: 1, author: "You", summary: "Created", markdown }] },
     },
     include: { revisions: true },
+  });
+  await indexDoc({
+    id: note.id, title: note.title, excerpt: note.markdown.slice(0, 280),
+    userId: user.id, kind: "note", type: "note",
   });
   return NextResponse.json(note, { status: 201 });
 }

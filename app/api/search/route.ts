@@ -8,6 +8,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") ?? "";
   if (!q.trim()) return NextResponse.json([]);
-  const hits = await searchAll(user.id, q, 20);
+  const types = (searchParams.get("type") ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 8);
+  const hits = await searchAll(user.id, q, 20, types);
   return NextResponse.json(hits);
 }

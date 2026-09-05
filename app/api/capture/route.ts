@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { extractUrl } from "@/lib/extract";
 import { parseArxivId } from "@/lib/arxiv";
+import { indexDoc } from "@/lib/embeddings";
 
 export const runtime = "nodejs";
 
@@ -79,10 +80,18 @@ export async function POST(req: Request) {
     if (existing) {
       const item = await getDb().item.update({ where: { id: existing.id }, data });
       await attachTags(user.id, item.id, ex.tags);
+      await indexDoc({
+        id: item.id, title: item.title, excerpt: item.excerpt,
+        userId: user.id, kind: "item", type: item.type,
+      });
       return NextResponse.json({ ...item, reprocessed: true });
     }
     const item = await getDb().item.create({ data: { ...data, userId: user.id, sourceUrl: url, status: "inbox" } });
     await attachTags(user.id, item.id, ex.tags);
+    await indexDoc({
+      id: item.id, title: item.title, excerpt: item.excerpt,
+      userId: user.id, kind: "item", type: item.type,
+    });
     return NextResponse.json(item, { status: 201 });
   } catch (e) {
     // Fail gracefully: never 500 on a bad page.

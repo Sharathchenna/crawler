@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { indexDoc, unindexDoc } from "@/lib/embeddings";
 
 async function owned(userId: string, id: string) {
   return getDb().note.findFirst({
@@ -54,6 +55,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     },
     include: { revisions: { orderBy: { version: "asc" } }, sources: { include: { item: true } } },
   });
+  await indexDoc({
+    id: updated.id, title: updated.title, excerpt: updated.markdown.slice(0, 280),
+    userId: user.id, kind: "note", type: "note",
+  });
   return NextResponse.json(updated);
 }
 
@@ -64,5 +69,6 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const note = await owned(user.id, id);
   if (!note) return NextResponse.json({ error: "Couldn't find that note." }, { status: 404 });
   await getDb().note.delete({ where: { id } });
+  await unindexDoc(id);
   return NextResponse.json({ ok: true });
 }
