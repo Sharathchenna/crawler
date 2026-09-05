@@ -1,0 +1,54 @@
+import SwiftUI
+import KeepKit
+
+@main
+struct HoardApp: App {
+  @State private var session = SessionStore()
+
+  var body: some Scene {
+    WindowGroup {
+      ContentView()
+        .environment(session)
+        .preferredColorScheme(.dark)
+    }
+  }
+}
+
+@Observable
+final class SessionStore {
+  var token: String? = HoardKeychain.loadToken()
+  var isSignedIn: Bool { token != nil && !(token?.isEmpty ?? true) }
+
+  var client: APIClient {
+    APIClient(baseURL: HoardConfig.baseURL, token: { HoardKeychain.loadToken() })
+  }
+
+  func signIn(token: String) {
+    try? HoardKeychain.saveToken(token)
+    self.token = token
+  }
+
+  func signOut() {
+    HoardKeychain.deleteToken()
+    token = nil
+  }
+
+  /// Flush offline outbox captured by the Share Extension.
+  func flushOutbox() async {
+    let entries = Outbox.load()
+    guard !entries.isEmpty, isSignedIn else { return }
+    for e in entries {
+      do {
+        if let url = e.url {
+          _ = try await client.capture(url: url)
+        } else if let text = e.text {
+          _ = try await client.captureText(title: e.title ?? "Shared note", text: text)
+        }
+        Outbox.remove(e.id)
+      } catch {
+        // Keep the rest queued; try again next launch.
+        continue
+      }
+    }
+  }
+}

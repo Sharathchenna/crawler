@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.build/
+ios/KeepKit/.build/
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+prisma/dev.db*
+*.db
+*.db-journal
+.DS_Store
+hoard-export/
+.env

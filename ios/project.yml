@@ -1,0 +1,71 @@
+name: Hoard
+options:
+  bundleIdPrefix: com.hoard
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+
+packages:
+  KeepKit:
+    path: KeepKit
+
+targets:
+  Hoard:
+    type: application
+    platform: iOS
+    bundleId: com.hoard.app
+    sources:
+      - path: Hoard
+    dependencies:
+      - package: KeepKit
+    settings:
+      base:
+        PRODUCT_NAME: Hoard
+        INFOPLIST_KEY_UIAppFonts: "Inter-Regular.ttf JetBrainsMono-Regular.ttf"
+        INFOPLIST_KEY_HoardAPIBaseURL: "http://localhost:3000"
+        INFOPLIST_KEY_AppGroupID: "group.com.hoard.app"
+    entitlements:
+      path: Hoard/Hoard.entitlements
+    info:
+      path: Hoard/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UIAppFonts: ["Inter-Regular.ttf", "JetBrainsMono-Regular.ttf"]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: ["hoard"]
+
+  HoardShare:
+    type: app-extension
+    platform: iOS
+    bundleId: com.hoard.app.share
+    sources:
+      - path: Share
+    dependencies:
+      - package: KeepKit
+      - target: Hoard
+    entitlements:
+      path: Share/Share.entitlements
+    info:
+      path: Share/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: ShareViewController
+          NSExtensionActivationRule:
+            NSExtensionActivationSupportsWebURLWithMaxCount: 1
+            NSExtensionActivationSupportsText: true
+            NSExtensionActivationSupportsWebPageWithMaxCount: 1
+
+schemes:
+  Hoard:
+    build:
+      targets:
+        Hoard: all
+        HoardShare: all
+    run:
+      config: Debug

@@ -1,0 +1,35 @@
+{
+  "name": "hoard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hoard — save anything as clean Markdown for humans and agents.",
+  "type": "commonjs",
+  "scripts": {
+    "setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@prisma/client": "^6.19.3",
+    "jsdom": "^30.0.1",
+    "next": "^15.5.25",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@types/turndown": "^5.0.6",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}

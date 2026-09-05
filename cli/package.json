@@ -1,0 +1,10 @@
+{
+  "name": "hoard-cli",
+  "version": "0.1.0",
+  "description": "Hoard CLI — save and search your Markdown library from the terminal.",
+  "type": "module",
+  "bin": {
+    "hoard": "./hoard.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
