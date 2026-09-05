@@ -22,12 +22,6 @@
 			"binding": "DB",
 			"database_name": "hoard",
 			"database_id": "383a4249-2aeb-4c22-8088-a66353f66a9b"
-		},
-		{
-			"binding": "hoard",
-			"database_name": "hoard",
-			"database_id": "383a4249-2aeb-4c22-8088-a66353f66a9b",
-			"remote": true
 		}
 	]
 }
