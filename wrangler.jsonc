@@ -7,6 +7,10 @@
 		"nodejs_compat",
 		"global_fetch_strictly_public"
 	],
+	"vars": {
+		"CF_ACCESS_TEAM_DOMAIN": "sharathchenna.cloudflareaccess.com",
+		"CF_ACCESS_AUD": "7924bc1d15a32d250ab08426ffdb85172d87b49a0b63a9190062a987d5e4fd79"
+	},
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
