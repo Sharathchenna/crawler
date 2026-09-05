@@ -22,11 +22,18 @@ final class SessionStore {
   var isSignedIn: Bool { token != nil && !(token?.isEmpty ?? true) }
 
   var client: APIClient {
-    APIClient(baseURL: HoardConfig.baseURL, token: { HoardKeychain.loadToken() })
+    APIClient(
+      baseURL: HoardConfig.baseURL,
+      token: { HoardKeychain.loadToken() },
+      accessHeaders: { HoardKeychain.accessHeaderFields() }
+    )
   }
 
-  func signIn(token: String, email: String) {
+  func signIn(token: String, accessId: String, accessSecret: String, email: String) {
     try? HoardKeychain.saveToken(token)
+    if !accessId.isEmpty, !accessSecret.isEmpty {
+      try? HoardKeychain.saveAccess(id: accessId, secret: accessSecret)
+    }
     UserDefaults.standard.set(email, forKey: "hoard.email")
     self.token = token
     self.email = email
@@ -34,6 +41,7 @@ final class SessionStore {
 
   func signOut() {
     HoardKeychain.deleteToken()
+    HoardKeychain.deleteAccess()
     token = nil
   }
 

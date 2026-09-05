@@ -68,7 +68,11 @@ final class ShareViewController: UIViewController {
       update("Saved to outbox — sign in to Hoard to send it. ✓")
       return
     }
-    let client = APIClient(baseURL: HoardConfigBaseURL(), token: { HoardKeychain.loadToken() })
+    let client = APIClient(
+      baseURL: HoardConfigBaseURL(),
+      token: { HoardKeychain.loadToken() },
+      accessHeaders: { HoardKeychain.accessHeaderFields() }
+    )
     do {
       if let url {
         let item = try await client.capture(url: url)

@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifySession } from "@/lib/auth";
 
+// Identity is enforced by Cloudflare Access in front of the app —
+// everyone who reaches here is authenticated.
 export default async function Home() {
-  const store = await cookies();
-  const userId = await verifySession(store.get("hoard_session")?.value);
-  redirect(userId ? "/library" : "/login");
+  redirect("/library");
 }

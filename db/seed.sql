@@ -3,7 +3,7 @@
 -- Password is PBKDF2-HMAC-SHA256 ($pbkdf2$ format, see lib/auth.ts).
 
 INSERT INTO users (id, email, password, plan, createdAt) VALUES
-('seed-user-demo', 'demo@hoard.local', '$pbkdf2$210000$738ae896b6fb166d19e8526a942804cc$15736872880fb7d2e661f5ed50798ef614d99628660835383a8b4f5c886c8dad', 'personal', '2026-09-05T12:00:00.000Z');
+('seed-user-demo', 'demo@hoard.local', 'managed-by-access', 'personal', '2026-09-05T12:00:00.000Z');
 
 INSERT INTO tags (id, userId, name) VALUES
 ('seed-tag-reading', 'seed-user-demo', 'reading'),

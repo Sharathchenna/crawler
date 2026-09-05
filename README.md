@@ -13,13 +13,16 @@ Runs on **Cloudflare Workers** (Next.js via OpenNext, Prisma + D1, auth with Web
 ## Quickstart (local)
 
 ```bash
-cp .env.example .env      # set AUTH_SECRET (32+ chars); APP_URL is for links/CLI
+cp .env.example .env      # set DEV_ACCESS_EMAIL to sign in locally (no Access in front)
 npm install
-npm run setup             # migrate + seed local D1 (demo@hoard.local / password)
+npm run setup             # migrate + seed local D1 (demo@hoard.local + seeded items)
 npm run dev               # http://localhost:3000, local D1 via bindings
 ```
 
-Demo login: `demo@hoard.local` / `password` (seeded with ~6 items, 2 tags, 1 note with 3 revisions).
+Demo: set `DEV_ACCESS_EMAIL="demo@hoard.local"` in `.env` and open `/library` —
+no password form exists. Identity comes from Cloudflare Access in production;
+locally the dev email impersonates one address (never set it in production).
+Seeded with ~6 items, 2 tags, 1 note with 3 revisions.
 
 To preview the real Workers runtime locally (workerd, same as production):
 
@@ -41,7 +44,7 @@ wrangler d1 execute hoard --remote --file=db/migrations/0001_init.sql
 wrangler d1 execute hoard --remote --file=db/seed.sql
 
 # 3. Secrets (dashboard works too; --keep-vars preserves them on deploy)
-wrangler secret put AUTH_SECRET
+# (no AUTH_SECRET anymore — sessions are gone; identity is the Access JWT)
 # optional, enables file→Markdown conversion:
 wrangler secret put CLOUDFLARE_API_TOKEN
 # + set CLOUDFLARE_ACCOUNT_ID as a plain var (wrangler.jsonc vars or dashboard)
@@ -54,6 +57,22 @@ Notes:
 - Runtime env comes from the dashboard/`wrangler secret`, not `.env` (local-only). `process.env` reads keep working because OpenNext populates them.
 - `npm run deploy` uses `--keep-vars` semantics via `opennextjs-cloudflare deploy`; add `-- --keep-vars` if you set vars outside wrangler.jsonc.
 - Plan fit: HTTP invocations have no wall-clock cap (long captures fine); CPU is 10ms free / 30s default paid — heavy pages want Paid. Subrequests are 50/invocation free (a capture uses ~6–10). Memory is 128MB/isolate.
+
+## Cloudflare Access setup (identity)
+
+There are no passwords. An Access application must front the hostname:
+
+1. Zero Trust → Access → Applications → add `crawler.<you>.top` (or keep yours).
+2. Copy the app's **AUD tag** → set `CF_ACCESS_AUD` (var) and
+   `CF_ACCESS_TEAM_DOMAIN` (e.g. `xyz.cloudflareaccess.com`) in dashboard vars.
+3. Machines (CLI, iOS, MCP clients) can't do the browser login: create a
+   **service token** (Access → Service Tokens), add it to the app's Allow
+   policy, and configure its Client ID + Secret in each client. The edge
+   checks those headers; Hoard checks the bearer token.
+4. First browser visit auto-provisions the user (plan `starter`).
+
+Without a valid JWT/bearer (and without `DEV_ACCESS_EMAIL`, local only),
+every API call 401s and app pages 404 — fail-closed by design.
 
 ## Tokens + MCP
 
@@ -128,20 +147,26 @@ hoard save https://example.com
 hoard export ./hoard-export        # front-matter .md files
 ```
 
-Config lives at `~/.hoard/config.json` (`{ apiUrl, token, client }`). No token → it tells you to run `login`. Network error → it prints the URL it tried and the fix.
+Config lives at `~/.hoard/config.json` (`{ apiUrl, token, client, cfAccessId?, cfAccessSecret? }`).
+`login` prompts for the Hoard token plus, only if the API sits behind Access,
+a service-token pair (Zero Trust → Access → Service Tokens; or env
+`HOARD_CF_ACCESS_ID` / `HOARD_CF_ACCESS_SECRET` — see `hoard help`). No token →
+it tells you to run `login`. Network error → it prints the URL it tried and the fix.
 
 ## API
 
-- `POST /api/auth/signup|login|logout`, `POST /api/auth/token` (email+password → bearer for iOS/CLI)
+- No password routes. Sign-in happens at Cloudflare Access; first sight auto-provisions
+  the user. Machines use bearer tokens from Settings (+ service-token headers past Access).
 - `POST /api/capture` `{ url }` or `{ text, title }` — never 500s on a bad page (saves a bookmark instead). Accepts session **or** bearer.
 - `GET/POST /api/items`, `GET/PATCH/DELETE /api/items/[id]` (status: inbox|saved|archived|done)
 - `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` (every PATCH → new `NoteRevision`)
 - `GET /api/search?q=`, `GET/POST /api/tokens`, `GET /api/tags`
 
-Every query is owner-scoped by `userId`. Auth is PBKDF2-HMAC-SHA256 sessions
-(WebCrypto — `lib/auth.ts`); passwords from the pre-Workers scrypt format
-don't transfer, so the seed uses the new format. Search is keyword today
-(D1 has no pgvector; Vectorize is the future seam).
+Every query is owner-scoped by `userId`. Auth is Cloudflare Access JWTs (`lib/access.ts`: RS256 certs, AUD + expiry
+checked) mapped to local users, plus Hoard bearer tokens for machines
+(`lib/auth.ts`). Sessions/cookies are gone — sign out at
+`/cdn-cgi/access/logout`. Search is keyword today (D1 has no pgvector;
+Vectorize is the future seam).
 
 ## iOS
 

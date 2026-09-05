@@ -17,13 +17,22 @@ public enum APIError: LocalizedError {
 }
 
 /// Bearer-token client. Same auth path agents use over MCP/CLI.
+/// When the API sits behind Cloudflare Access, pass `accessHeaders`
+/// (service-token headers, checked at the edge); identity still comes
+/// from the Hoard bearer token.
 public final class APIClient: Sendable {
   public let baseURL: URL
   public let token: @Sendable () -> String?
+  public let accessHeaders: @Sendable () -> [String: String]
 
-  public init(baseURL: URL, token: @escaping @Sendable () -> String?) {
+  public init(
+    baseURL: URL,
+    token: @escaping @Sendable () -> String?,
+    accessHeaders: @escaping @Sendable () -> [String: String] = { [:] }
+  ) {
     self.baseURL = baseURL
     self.token = token
+    self.accessHeaders = accessHeaders
   }
 
   public static func makeDecoder() -> JSONDecoder {
@@ -49,6 +58,9 @@ public final class APIClient: Sendable {
     req.timeoutInterval = 30
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization")
+    for (key, value) in accessHeaders() where !value.isEmpty {
+      req.setValue(value, forHTTPHeaderField: key)
+    }
     if let body {
       req.httpBody = try JSONEncoder().encode(AnyEncodable(body))
     }
@@ -79,28 +91,6 @@ public final class APIClient: Sendable {
       }
       throw APIError.decoding(error.localizedDescription)
     }
-  }
-
-  // MARK: - Auth
-
-  public struct TokenResponse: Decodable { public var token: String }
-
-  public static func signInForToken(baseURL: URL, email: String, password: String) async throws -> String {
-    var req = URLRequest(url: baseURL.appendingPathComponent("/api/auth/token"))
-    req.httpMethod = "POST"
-    req.timeoutInterval = 20
-    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    req.httpBody = try JSONEncoder().encode(["email": email, "password": password])
-    let (data, response) = try await URLSession.shared.data(for: req)
-    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-    let d = makeDecoder()
-    if !(200...299).contains(status) {
-      if let err = try? d.decode(ErrorPayload.self, from: data) {
-        throw APIError.serverMessage(err.error)
-      }
-      throw APIError.serverMessage("Wrong email or password. Try again.")
-    }
-    return try d.decode(TokenResponse.self, from: data).token
   }
 
   // MARK: - Capture

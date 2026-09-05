@@ -120,6 +120,8 @@ export default function SettingsPage() {
         </button>
         <div aria-live="polite" className="mt-2 font-mono text-[11px] text-[var(--text-faint)]">
           Needs a token: add `Authorization: Bearer hoard_…` in your client if it asks for headers.
+          Behind Cloudflare Access, also add your service-token headers (`CF-Access-Client-Id` /
+          `CF-Access-Client-Secret`) — the edge checks those, Hoard checks the bearer.
         </div>
       </section>
     </div>

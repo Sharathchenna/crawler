@@ -11,9 +11,18 @@ public enum HoardKeychain {
 
   private static let service = "com.hoard.app.token"
   private static let account = "bearer"
+  private static let accessAccount = "access"
 
-  public static func saveToken(_ token: String) throws {
-    let data = Data(token.utf8)
+  public struct AccessCredentials: Codable {
+    public var id: String
+    public var secret: String
+    public init(id: String, secret: String) {
+      self.id = id
+      self.secret = secret
+    }
+  }
+
+  private static func save(account: String, data: Data) throws {
     var query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
@@ -28,7 +37,7 @@ public enum HoardKeychain {
     guard status == errSecSuccess else { throw KeychainError.add(status) }
   }
 
-  public static func loadToken() -> String? {
+  private static func load(account: String) -> Data? {
     var query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
@@ -40,10 +49,10 @@ public enum HoardKeychain {
     var out: AnyObject?
     guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess,
           let data = out as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
+    return data
   }
 
-  public static func deleteToken() {
+  private static func delete(account: String) {
     var query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
@@ -51,6 +60,39 @@ public enum HoardKeychain {
     ]
     if let g = accessGroup { query[kSecAttrAccessGroup as String] = g }
     SecItemDelete(query as CFDictionary)
+  }
+
+  public static func saveToken(_ token: String) throws {
+    try save(account: account, data: Data(token.utf8))
+  }
+
+  public static func loadToken() -> String? {
+    guard let data = load(account: account) else { return nil }
+    return String(data: data, encoding: .utf8)
+  }
+
+  public static func deleteToken() {
+    delete(account: account)
+  }
+
+  /// Cloudflare Access service-token pair (checked at the edge).
+  public static func saveAccess(id: String, secret: String) throws {
+    try save(account: accessAccount, data: try JSONEncoder().encode(AccessCredentials(id: id, secret: secret)))
+  }
+
+  public static func loadAccess() -> AccessCredentials? {
+    guard let data = load(account: accessAccount) else { return nil }
+    return try? JSONDecoder().decode(AccessCredentials.self, from: data)
+  }
+
+  public static func deleteAccess() {
+    delete(account: accessAccount)
+  }
+
+  /// Header fields for Access-protected APIs (empty when not configured).
+  public static func accessHeaderFields() -> [String: String] {
+    guard let c = loadAccess(), !c.id.isEmpty, !c.secret.isEmpty else { return [:] }
+    return ["CF-Access-Client-Id": c.id, "CF-Access-Client-Secret": c.secret]
   }
 
   public enum KeychainError: Error {

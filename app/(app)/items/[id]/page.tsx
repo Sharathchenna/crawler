@@ -1,18 +1,17 @@
-import { cookies } from "next/headers";
-import { redirect, notFound } from "next/navigation";
-import { verifySession } from "@/lib/auth";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { userFromHeaders } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { renderMarkdownHtml } from "@/lib/markdown-html";
 import { ItemReader } from "./reader-client";
 
 export default async function ItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const store = await cookies();
-  const userId = await verifySession(store.get("hoard_session")?.value);
-  if (!userId) redirect("/login");
+  const user = await userFromHeaders(await headers());
+  if (!user) notFound();
 
   const item = await getDb().item.findFirst({
-    where: { id, userId },
+    where: { id, userId: user.id },
     include: { tags: { include: { tag: true } } },
   });
   if (!item) notFound();

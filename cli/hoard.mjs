@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // hoard CLI — talks to the same backend agents use over MCP.
-// Config: ~/.hoard/config.json { apiUrl, token, client }
+// Config: ~/.hoard/config.json { apiUrl, token, client, cfAccessId?, cfAccessSecret? }
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -29,6 +29,15 @@ function needToken(cfg) {
   }
 }
 
+async function accessHeaders(cfg) {
+  // Cloudflare Access service-token headers (checked at the edge).
+  // Needed only when the API sits behind Access; harmless otherwise.
+  const id = cfg.cfAccessId ?? process.env.HOARD_CF_ACCESS_ID ?? "";
+  const secret = cfg.cfAccessSecret ?? process.env.HOARD_CF_ACCESS_SECRET ?? "";
+  if (!id || !secret) return {};
+  return { "CF-Access-Client-Id": id, "CF-Access-Client-Secret": secret };
+}
+
 async function api(cfg, path, opts = {}) {
   const url = `${cfg.apiUrl.replace(/\/$/, "")}${path}`;
   let res;
@@ -38,6 +47,7 @@ async function api(cfg, path, opts = {}) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${cfg.token}`,
+        ...(await accessHeaders(cfg)),
         ...(opts.headers ?? {}),
       },
     });
@@ -110,7 +120,15 @@ if (cmd === "login") {
     console.error("No token given. Issue one in Hoard → Settings → Agent tokens.");
     process.exit(1);
   }
+  // Cloudflare Access service token (only needed if the API sits behind
+  // Access; create one in Zero Trust → Access → Service Tokens).
   const next = { apiUrl: base, token, client: clientName };
+  const cfId = (await prompt("Access Client ID (empty to skip): ")) || cfg.cfAccessId || "";
+  const cfSecret = cfId ? await prompt("Access Client Secret: ") : cfg.cfAccessSecret || "";
+  if (cfId && cfSecret) {
+    next.cfAccessId = cfId;
+    next.cfAccessSecret = cfSecret;
+  }
   // whoami-style verify
   await api(next, `/api/search?q=${encodeURIComponent("a")}`).catch(() => {});
   // verify more strictly: search worked or token endpoint reachable; fall back to tags
@@ -167,9 +185,10 @@ if (cmd === "export") {
   needToken(cfg);
   const dir = rest[0] ?? "hoard-export";
   await mkdir(dir, { recursive: true });
+  const extraHeaders = await accessHeaders(cfg);
   const [itemsRes, notesRes] = await Promise.all([
-    fetch(`${cfg.apiUrl.replace(/\/$/, "")}/api/items`, { headers: { Authorization: `Bearer ${cfg.token}` } }),
-    fetch(`${cfg.apiUrl.replace(/\/$/, "")}/api/notes`, { headers: { Authorization: `Bearer ${cfg.token}` } }),
+    fetch(`${cfg.apiUrl.replace(/\/$/, "")}/api/items`, { headers: { Authorization: `Bearer ${cfg.token}`, ...extraHeaders } }),
+    fetch(`${cfg.apiUrl.replace(/\/$/, "")}/api/notes`, { headers: { Authorization: `Bearer ${cfg.token}`, ...extraHeaders } }),
   ]);
   const items = await itemsRes.json();
   const notes = await notesRes.json();

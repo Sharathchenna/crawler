@@ -18,7 +18,7 @@ ios/
   Hoard/                      SwiftUI app (MVVM, @Observable, async/await)
     HoardApp.swift            @main + SessionStore (token, flushOutbox)
     ContentView.swift         tabs + ＋ quick capture
-    AuthView.swift            email/password → /api/auth/token → Keychain
+    AuthView.swift            token + Access service pair → Keychain
     LibraryViews.swift        Library (tab 1) + Inbox (tab 2)
     ItemReaderView.swift      Markdown + SFSafariViewController + Copy
     NotesViews.swift          Notes list + editor (preview toggle, revisions feed)
@@ -39,7 +39,7 @@ Bundle IDs: `com.hoard.app` + `com.hoard.app.share`. App Group: `group.com.hoard
 ```bash
 cp .env.example .env
 npm install && npm run setup && npm run dev   # http://localhost:3000
-# demo: demo@hoard.local / password
+# demo: DEV_ACCESS_EMAIL="demo@hoard.local" in .env (no password form)
 ```
 
 ## Open the app
@@ -59,7 +59,10 @@ Option B: create a blank iOS App project in Xcode, drag in `Hoard/` + `KeepKit/`
 
 ## Sign in + test
 
-1. Run on simulator/device, sign in with `demo@hoard.local` / `password` (calls `POST /api/auth/token`, stores bearer in shared Keychain).
+1. In a browser behind Cloudflare Access, open Settings → Agent tokens → issue a token.
+   Create a service-token pair (Zero Trust → Access → Service Tokens) if the API
+   sits behind Access. In the app, paste the Hoard token (+ Access ID/secret);
+   it verifies with a light read before storing everything in the shared Keychain.
 2. Library/Inbox/Notes/Search mirror `/library`, `/inbox`, `/notes`, `/search`. ＋ captures a pasted URL via `POST /api/capture`.
 3. Settings → issue token, pick an MCP client, copy the same snippet the web builds.
 

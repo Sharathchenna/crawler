@@ -216,10 +216,9 @@ export function Shell({ email, children }: { email: string; children: React.Reac
     }
   }
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+  // Sign-out lives with the identity provider (Cloudflare Access).
+  function logout() {
+    window.location.href = "/cdn-cgi/access/logout";
   }
 
   return (
