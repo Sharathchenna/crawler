@@ -208,6 +208,9 @@ export function Shell({ email, children }: { email: string; children: React.Reac
         setStatus(`Ready — ${data.reprocessed ? "updated" : "saved"}: ${data.title ?? ""}`);
         setUrl("");
         router.refresh();
+        // Lists are client components (unaffected by router.refresh),
+        // so tell them to refetch explicitly.
+        window.dispatchEvent(new Event("hoard:items-changed"));
       }
     } catch {
       setStatus("Network hiccup — check you're online and try again.");

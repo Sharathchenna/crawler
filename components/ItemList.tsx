@@ -36,6 +36,11 @@ export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; e
 
   useEffect(() => {
     load();
+    // The sidebar capture bar notifies here (router.refresh doesn't
+    // re-run client-component fetches, so this event is the refresh).
+    const onChange = () => load();
+    window.addEventListener("hoard:items-changed", onChange);
+    return () => window.removeEventListener("hoard:items-changed", onChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
