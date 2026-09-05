@@ -222,8 +222,8 @@ export function Shell({ email, children }: { email: string; children: React.Reac
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-[min(100%-3rem,64rem)] gap-0">
-      {/* Fixed left rail ~240px */}
+    <div className="flex min-h-screen">
+      {/* Fixed left rail ~240px, anchored to the viewport edge */}
       <aside
         className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[var(--bg-raised)] px-3 py-5"
         aria-label="Primary"
@@ -319,8 +319,8 @@ export function Shell({ email, children }: { email: string; children: React.Reac
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-8 py-8" role="main">
-        {children}
+      <main className="min-w-0 flex-1" role="main">
+        <div className="mx-auto w-full max-w-4xl px-8 py-8">{children}</div>
       </main>
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
