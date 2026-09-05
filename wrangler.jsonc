@@ -27,5 +27,18 @@
 			"database_name": "hoard",
 			"database_id": "383a4249-2aeb-4c22-8088-a66353f66a9b"
 		}
-	]
+	],
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"persist": true
+		}
+	}
 }
