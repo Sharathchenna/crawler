@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 
 export async function GET(req: Request) {
   const user = await requireUser(req);
   if (!user) return NextResponse.json({ error: "Sign in first — your notes are private to you." }, { status: 401 });
-  const notes = await db.note.findMany({
+  const notes = await getDb().note.findMany({
     where: { userId: user.id },
     include: { _count: { select: { revisions: true, sources: true } } },
     orderBy: { updatedAt: "desc" },
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   }
   const title = (body.title ?? "Untitled").trim().slice(0, 300) || "Untitled";
   const markdown = (body.markdown ?? "").slice(0, 200_000);
-  const note = await db.note.create({
+  const note = await getDb().note.create({
     data: {
       userId: user.id,
       title,

@@ -5,5 +5,14 @@ let package = Package(
   name: "KeepKit",
   platforms: [.iOS(.v17)],
   products: [.library(name: "KeepKit", targets: ["KeepKit"])],
-  targets: [.target(name: "KeepKit", path: "Sources/KeepKit")]
+  dependencies: [
+    .package(url: "https://github.com/apple/swift-markdown.git", from: "0.2.0"),
+  ],
+  targets: [
+    .target(
+      name: "KeepKit",
+      dependencies: [.product(name: "Markdown", package: "swift-markdown")],
+      path: "Sources/KeepKit"
+    ),
+  ]
 )

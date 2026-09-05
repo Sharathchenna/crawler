@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MCP_CLIENTS, buildConfig } from "@/lib/mcp-config";
+import { apiJson } from "@/components/api";
 
 type TokenRow = { id: string; client: string; createdAt: string; lastUsedAt?: string | null };
 
@@ -15,7 +16,7 @@ export default function SettingsPage() {
 
   async function load() {
     const res = await fetch("/api/tokens");
-    if (res.ok) setTokens(await res.json());
+    if (res.ok) setTokens(await apiJson<TokenRow[]>(res));
   }
   useEffect(() => {
     load();
@@ -28,7 +29,7 @@ export default function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client: "web" }),
     });
-    const data = await res.json();
+    const data = await apiJson<{ token: string }>(res);
     if (res.ok) {
       setFresh(data.token);
       load();

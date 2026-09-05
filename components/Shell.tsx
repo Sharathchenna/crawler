@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { apiJson } from "@/components/api";
 
 const NAV = [
   { href: "/library", label: "Library", icon: "▤" },
@@ -38,7 +39,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        if (res.ok) setHits(await res.json());
+        if (res.ok) setHits(await apiJson<PaletteHit[]>(res));
       } catch {}
     }, 180);
     return () => clearTimeout(t);
@@ -162,6 +163,7 @@ export function Shell({ email, children }: { email: string; children: React.Reac
   const [url, setUrl] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState(0);
   const [palette, setPalette] = useState(false);
 
   useEffect(() => {
@@ -175,22 +177,35 @@ export function Shell({ email, children }: { email: string; children: React.Reac
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Animate the Fetching → Extracting → Converting pipeline state while capturing.
+  useEffect(() => {
+    if (!busy) return;
+    setStage(0);
+    const t1 = setTimeout(() => setStage(1), 900);
+    const t2 = setTimeout(() => setStage(2), 2200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [busy]);
+
   async function capture(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim() || busy) return;
     setBusy(true);
-    setStatus("Saving…");
+    setStatus(null);
     try {
       const res = await fetch("/api/capture", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: url.trim() }),
       });
-      const data = await res.json();
+      const data = await apiJson<{ error?: string; title?: string; reprocessed?: boolean }>(res);
       if (!res.ok) {
         setStatus(data.error ?? "Couldn't save that. Try again.");
       } else {
-        setStatus(`Saved · ${data.title ?? ""}`);
+        setStage(3);
+        setStatus(`Ready — ${data.reprocessed ? "updated" : "saved"}: ${data.title ?? ""}`);
         setUrl("");
         router.refresh();
       }
@@ -252,7 +267,7 @@ export function Shell({ email, children }: { email: string; children: React.Reac
             </button>
           </div>
           <div aria-live="polite" className="min-h-4 px-1 font-mono text-[11px] text-[var(--text-muted)]">
-            {status}
+            {busy ? `${["Fetching", "Extracting", "Converting"][stage] ?? "Fetching"}…` : status}
           </div>
         </form>
 

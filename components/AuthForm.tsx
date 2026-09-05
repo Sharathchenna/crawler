@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { apiJson } from "@/components/api";
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
@@ -32,7 +33,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await apiJson<{ error?: string }>(res);
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
       } else {

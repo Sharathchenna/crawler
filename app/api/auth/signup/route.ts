@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { hashPassword, sessionCookie } from "@/lib/auth";
 
 function isEmail(v: string) {
@@ -17,10 +17,10 @@ export async function POST(req: Request) {
   const password = body.password ?? "";
   if (!isEmail(email)) return NextResponse.json({ error: "That email doesn't look right. Check it and try again." }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "Use a password with at least 8 characters." }, { status: 400 });
-  const existing = await db.user.findUnique({ where: { email } });
+  const existing = await getDb().user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "That email is already registered. Sign in instead." }, { status: 409 });
-  const user = await db.user.create({ data: { email, password: hashPassword(password), plan: "starter" } });
+  const user = await getDb().user.create({ data: { email, password: await hashPassword(password), plan: "starter" } });
   const res = NextResponse.json({ id: user.id, email: user.email });
-  res.headers.set("Set-Cookie", sessionCookie(user.id));
+  res.headers.set("Set-Cookie", await sessionCookie(user.id));
   return res;
 }

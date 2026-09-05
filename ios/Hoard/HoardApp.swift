@@ -10,6 +10,7 @@ struct HoardApp: App {
       ContentView()
         .environment(session)
         .preferredColorScheme(.dark)
+        .background(HoardTheme.canvas)
     }
   }
 }
@@ -17,15 +18,18 @@ struct HoardApp: App {
 @Observable
 final class SessionStore {
   var token: String? = HoardKeychain.loadToken()
+  var email: String = UserDefaults.standard.string(forKey: "hoard.email") ?? ""
   var isSignedIn: Bool { token != nil && !(token?.isEmpty ?? true) }
 
   var client: APIClient {
     APIClient(baseURL: HoardConfig.baseURL, token: { HoardKeychain.loadToken() })
   }
 
-  func signIn(token: String) {
+  func signIn(token: String, email: String) {
     try? HoardKeychain.saveToken(token)
+    UserDefaults.standard.set(email, forKey: "hoard.email")
     self.token = token
+    self.email = email
   }
 
   func signOut() {
@@ -46,7 +50,6 @@ final class SessionStore {
         }
         Outbox.remove(e.id)
       } catch {
-        // Keep the rest queued; try again next launch.
         continue
       }
     }

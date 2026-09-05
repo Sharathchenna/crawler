@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 
 const VALID_STATUS = new Set(["inbox", "saved", "archived", "done"]);
 
 async function owned(userId: string, id: string) {
-  return db.item.findFirst({ where: { id, userId }, include: { tags: { include: { tag: true } } } });
+  return getDb().item.findFirst({ where: { id, userId }, include: { tags: { include: { tag: true } } } });
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -32,7 +32,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (body.status && !VALID_STATUS.has(body.status)) {
     return NextResponse.json({ error: "Unknown status. Use inbox, saved, archived, or done." }, { status: 400 });
   }
-  const updated = await db.item.update({
+  const updated = await getDb().item.update({
     where: { id },
     data: {
       ...(body.title !== undefined ? { title: body.title.slice(0, 300) } : {}),
@@ -49,6 +49,6 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const { id } = await ctx.params;
   const existing = await owned(user.id, id);
   if (!existing) return NextResponse.json({ error: "Couldn't find that item. It may already be deleted." }, { status: 404 });
-  await db.item.delete({ where: { id } });
+  await getDb().item.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

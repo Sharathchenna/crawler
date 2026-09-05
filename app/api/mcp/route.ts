@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { bearerUserFromToken } from "@/lib/auth";
 import { searchAll } from "@/lib/search";
 
@@ -121,7 +121,7 @@ async function handleOne(body: RpcReq, req: Request) {
         }
         case "get_item": {
           const itemId = String(args.id ?? "");
-          const item = await db.item.findFirst({ where: { id: itemId, userId: user.id } });
+          const item = await getDb().item.findFirst({ where: { id: itemId, userId: user.id } });
           if (!item) return NextResponse.json(rpcErr(id, -32002, "Item not found."));
           const md = `# ${item.title}\n\n${item.sourceUrl ? `[Original](${item.sourceUrl})\n\n` : ""}${item.markdown}`;
           return NextResponse.json(rpcOk(id, textResult(md)));
@@ -130,7 +130,7 @@ async function handleOne(body: RpcReq, req: Request) {
           const title = String(args.title ?? "Untitled").slice(0, 300);
           const markdown = String(args.markdown ?? "").slice(0, 200_000);
           const project = String(args.project ?? "").slice(0, 80);
-          const note = await db.note.create({
+          const note = await getDb().note.create({
             data: {
               userId: user.id,
               title,
@@ -145,20 +145,20 @@ async function handleOne(body: RpcReq, req: Request) {
           const noteId = String(args.id ?? "");
           const markdown = String(args.markdown ?? "").slice(0, 200_000);
           const summary = String(args.summary ?? "Updated via MCP").slice(0, 200);
-          const note = await db.note.findFirst({
+          const note = await getDb().note.findFirst({
             where: { id: noteId, userId: user.id },
             include: { revisions: { orderBy: { version: "desc" }, take: 1 } },
           });
           if (!note) return NextResponse.json(rpcErr(id, -32002, "Note not found."));
           const next = (note.revisions[0]?.version ?? 0) + 1;
-          await db.$transaction([
-            db.noteRevision.create({ data: { noteId, version: next, author: "Agent", summary, markdown } }),
-            db.note.update({ where: { id: noteId }, data: { markdown } }),
+          await getDb().$transaction([
+            getDb().noteRevision.create({ data: { noteId, version: next, author: "Agent", summary, markdown } }),
+            getDb().note.update({ where: { id: noteId }, data: { markdown } }),
           ]);
           return NextResponse.json(rpcOk(id, textResult(`Updated note "${note.title}" → v${next}.`)));
         }
         case "list_tags": {
-          const tags = await db.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+          const tags = await getDb().tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
           const md = tags.length ? tags.map((t) => `- ${t.name}`).join("\n") : "No tags yet.";
           return NextResponse.json(rpcOk(id, textResult(md)));
         }

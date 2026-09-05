@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/components/Shell";
+import { apiJson } from "@/components/api";
 
 type Note = {
   id: string;
@@ -20,7 +21,7 @@ export default function NotesPage() {
 
   async function load() {
     const res = await fetch("/api/notes");
-    if (res.ok) setNotes(await res.json());
+    if (res.ok) setNotes(await apiJson<Note[]>(res));
   }
   useEffect(() => {
     load();
@@ -34,7 +35,7 @@ export default function NotesPage() {
       body: JSON.stringify({ title: title || "Untitled" }),
     });
     if (res.ok) {
-      const n = await res.json();
+      const n = await apiJson<{ id: string }>(res);
       router.push(`/notes/${n.id}`);
     }
   }

@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { getDb } from "./db";
 
 export type SearchHit = {
   id: string;
@@ -28,7 +28,7 @@ export async function searchAll(userId: string, q: string, limit = 20): Promise<
   if (!query) return [];
   const take = Math.min(Math.max(limit, 1), 50);
   const [items, notes] = await Promise.all([
-    db.item.findMany({
+    getDb().item.findMany({
       where: {
         userId,
         OR: [
@@ -40,7 +40,7 @@ export async function searchAll(userId: string, q: string, limit = 20): Promise<
       orderBy: { createdAt: "desc" },
       take,
     }),
-    db.note.findMany({
+    getDb().note.findMany({
       where: {
         userId,
         OR: [{ title: { contains: query } }, { markdown: { contains: query } }],

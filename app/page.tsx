@@ -4,6 +4,6 @@ import { verifySession } from "@/lib/auth";
 
 export default async function Home() {
   const store = await cookies();
-  const userId = verifySession(store.get("hoard_session")?.value);
+  const userId = await verifySession(store.get("hoard_session")?.value);
   redirect(userId ? "/library" : "/login");
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { apiJson } from "@/components/api";
 
 type Hit = { id: string; kind: "item" | "note"; title: string; snippet: string; type: string; sourceUrl?: string | null };
 
@@ -19,7 +20,7 @@ export default function SearchPage() {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        if (res.ok) setHits(await res.json());
+        if (res.ok) setHits(await apiJson<Hit[]>(res));
       } finally {
         setBusy(false);
       }

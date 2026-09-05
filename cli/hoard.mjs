@@ -174,11 +174,19 @@ if (cmd === "export") {
   const items = await itemsRes.json();
   const notes = await notesRes.json();
   let count = 0;
-  const front = (title, source, date) => `---\ntitle: ${JSON.stringify(title)}\n${source ? `source: ${JSON.stringify(source)}\n` : ""}date: ${JSON.stringify(date)}\n---\n\n`;
+  const front = (title, source, date, extra = {}) => {
+    const lines = [`title: ${JSON.stringify(title)}`];
+    if (source) lines.push(`source: ${JSON.stringify(source)}`);
+    lines.push(`date: ${JSON.stringify(date)}`);
+    if (extra.author) lines.push(`author: ${JSON.stringify(extra.author)}`);
+    if (extra.published) lines.push(`published: ${JSON.stringify(extra.published)}`);
+    if (extra.extracted) lines.push(`extracted: ${JSON.stringify(extra.extracted)}`);
+    return `---\n${lines.join("\n")}\n---\n\n`;
+  };
   for (const it of items) {
     const full = await api(cfg, `/api/items/${it.id}`);
     const name = `${slug(full.title)}-${full.id.slice(-6)}.md`;
-    await writeFile(join(dir, name), `${front(full.title, full.sourceUrl ?? "", full.createdAt ?? "")}${full.markdown ?? ""}`);
+    await writeFile(join(dir, name), `${front(full.title, full.sourceUrl ?? "", full.createdAt ?? "", { author: full.author ?? "", published: full.publishedAt ?? "", extracted: full.extractedAt ?? "" })}${full.markdown ?? ""}`);
     count++;
   }
   for (const n of notes) {

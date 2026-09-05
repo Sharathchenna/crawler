@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { apiJson } from "@/components/api";
 
 type Revision = { version: number; author: string; summary: string; createdAt: string };
 type Note = {
@@ -25,7 +26,7 @@ export default function NoteEditorPage() {
 
   async function load() {
     const res = await fetch(`/api/notes/${id}`);
-    const data = await res.json();
+    const data = await apiJson<Note & { error?: string }>(res);
     if (!res.ok) {
       setError(data.error ?? "Couldn't find that note.");
       return;
@@ -45,7 +46,7 @@ export default function NoteEditorPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markdown: draft, summary: summary || "Edited" }),
     });
-    const data = await res.json();
+    const data = await apiJson<Note & { error?: string }>(res);
     if (!res.ok) {
       setStatus(null);
       setError(data.error ?? "Couldn't save.");

@@ -149,3 +149,81 @@ a, button, input, select, textarea, [role="option"] {
 .reader-body {
   max-width: 72ch;
 }
+
+/* Reader typography (rendered server-side from Markdown) */
+.reader-body h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin: 0.5rem 0; }
+.reader-body h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin: 1.25rem 0 0.5rem; }
+.reader-body h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin: 1rem 0 0.5rem; }
+.reader-body h4, .reader-body h5, .reader-body h6 { font-size: 14px; font-weight: 600; color: var(--text); margin: 1rem 0 0.5rem; }
+.reader-body p { margin: 0.5rem 0; }
+.reader-body ul { margin: 0.5rem 0; padding: 0; }
+.reader-body ul > li { list-style: disc; margin-left: 1.25rem; }
+.reader-body ol { margin: 0.5rem 0; padding: 0; }
+.reader-body ol > li { list-style: decimal; margin-left: 1.25rem; }
+.reader-body li > input[type="checkbox"] { margin-right: 0.4rem; accent-color: var(--accent); }
+.reader-body blockquote { margin: 0.75rem 0; border-left: 2px solid var(--accent); padding-left: 0.75rem; color: var(--text-muted); }
+.reader-body a { text-decoration: underline; color: var(--text); }
+.reader-body img { margin: 1rem 0; max-width: 100%; border-radius: 10px; border: 1px solid var(--border-soft); }
+.reader-body hr { margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-soft); }
+.reader-body del { color: var(--text-muted); }
+.reader-body table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 1rem 0; display: block; overflow-x: auto; }
+.reader-body th, .reader-body td { border: 1px solid var(--border-soft); padding: 0.25rem 0.5rem; text-align: left; }
+.reader-body th { background: var(--bg-raised); color: var(--text); }
+/* Inline code chips (block code is handled by Shiki below) */
+.reader-body :not(pre) > code {
+  border-radius: 6px;
+  background: var(--bg-hover);
+  padding: 0 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+/* Code block card chrome (structure injected by the codeChrome plugin) */
+.reader-body .codeblock {
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-raised);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.reader-body .codeblock-head {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0.375rem 0.75rem;
+}
+.reader-body .codeblock-head span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.reader-body .codeblock pre.shiki {
+  margin: 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Syntax highlighting (Shiki, dual themes: dark default, light under html.light).
+   Token colors swap per theme; backgrounds always stay transparent so the
+   card surface shows through (per-token backgrounds stripe the code). */
+.reader-body pre.shiki span {
+  background-color: transparent !important;
+}
+html:not(.light) .reader-body pre.shiki,
+html:not(.light) .reader-body pre.shiki span {
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+/* The card provides the surface; Shiki's own background stays transparent.
+   Applies to every reader code block, not just labeled ones. */
+html .reader-body pre.shiki.shiki-themes,
+html .reader-body .codeblock pre.shiki.shiki-themes {
+  background-color: transparent !important;
+  max-width: 100%;
+  overflow-x: auto;
+}

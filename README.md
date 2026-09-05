@@ -2,22 +2,58 @@
 
 A personal library that saves web pages, X threads, PDFs, images, audio, and YouTube links as **clean Markdown** that humans and AI agents can search, read, and update over **web, MCP, CLI, API, and iOS**.
 
+Runs on **Cloudflare Workers** (Next.js via OpenNext, Prisma + D1, auth with WebCrypto — no Node-only APIs).
+
 - Web app: auth, capture bar, Library, Inbox, reader, notes editor with revisions, search, settings/tokens.
-- Backend: Next.js 15 route handlers + Prisma (SQLite locally, one-line switch to PostgreSQL for pgvector).
+- Backend: Next.js 15 route handlers + Prisma over **D1** (per-request clients, no global connection).
 - MCP server: `POST /api/mcp` (JSON-RPC 2.0 / streamable HTTP).
-- CLI: `hoard login|search|save|export`.
+- CLI: `hoard login|search|save|export` (points at any deployment via `--api-url`).
 - iOS: native SwiftUI + Share Extension, same API, same look.
 
-## Quickstart
+## Quickstart (local)
 
 ```bash
-cp .env.example .env      # set AUTH_SECRET (32+ chars), DATABASE_URL, APP_URL
+cp .env.example .env      # set AUTH_SECRET (32+ chars); APP_URL is for links/CLI
 npm install
-npm run setup             # prisma generate && prisma db push && tsx prisma/seed.ts
-npm run dev               # http://localhost:3000
+npm run setup             # migrate + seed local D1 (demo@hoard.local / password)
+npm run dev               # http://localhost:3000, local D1 via bindings
 ```
 
 Demo login: `demo@hoard.local` / `password` (seeded with ~6 items, 2 tags, 1 note with 3 revisions).
+
+To preview the real Workers runtime locally (workerd, same as production):
+
+```bash
+npm run preview           # builds + serves on http://localhost:8787
+```
+
+## Deploy to Cloudflare Workers
+
+Prereqs: a Cloudflare account + `wrangler login`.
+
+```bash
+# 1. Create the production database and point wrangler at it
+wrangler d1 create hoard
+# → paste the returned database_id into wrangler.jsonc (d1_databases)
+
+# 2. Migrate + seed production
+wrangler d1 execute hoard --remote --file=db/migrations/0001_init.sql
+wrangler d1 execute hoard --remote --file=db/seed.sql
+
+# 3. Secrets (dashboard works too; --keep-vars preserves them on deploy)
+wrangler secret put AUTH_SECRET
+# optional, enables file→Markdown conversion:
+wrangler secret put CLOUDFLARE_API_TOKEN
+# + set CLOUDFLARE_ACCOUNT_ID as a plain var (wrangler.jsonc vars or dashboard)
+
+# 4. Ship it
+npm run deploy            # or: connect the repo in Workers Builds (git push to deploy)
+```
+
+Notes:
+- Runtime env comes from the dashboard/`wrangler secret`, not `.env` (local-only). `process.env` reads keep working because OpenNext populates them.
+- `npm run deploy` uses `--keep-vars` semantics via `opennextjs-cloudflare deploy`; add `-- --keep-vars` if you set vars outside wrangler.jsonc.
+- Plan fit: HTTP invocations have no wall-clock cap (long captures fine); CPU is 10ms free / 30s default paid — heavy pages want Paid. Subrequests are 50/invocation free (a capture uses ~6–10). Memory is 128MB/isolate.
 
 ## Tokens + MCP
 
@@ -35,11 +71,58 @@ curl -X POST $APP_URL/api/mcp -H "Authorization: Bearer hoard_…" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_items","arguments":{"query":"markdown"}}}'
 ```
 
+## Reader pipeline (cloned Web Clipper + Shiki)
+
+Saving a URL runs an automatic pipeline — the capture bar shows
+`Fetching → Extracting → Converting → Ready`:
+
+1. **Fetch** the page (20s timeout, follows redirects, browser User-Agent).
+2. **Extract** with the real **Obsidian Web Clipper**, cloned into
+   `vendor/obsidian-clipper` (MIT, upstream commit recorded in
+   `vendor/obsidian-clipper/INTEGRATION.md`). `lib/clipper.ts` calls its
+   environment-agnostic `clip()` (`src/api.ts`) with the default template
+   (title, source, author, published, created, description, tags): Defuddle
+   main-content extraction → `createMarkdownContent` Markdown conversion
+   (headings, lists, links, code blocks, tables, blockquotes, images with
+   original URLs — assets are never downloaded) → compiled note.
+3. **Render** server-side (`lib/markdown-html.ts`): unified + remark-gfm for
+   full Markdown, Shiki (VS Code-grade, JS regex engine — the only engine
+   workerd allows) for code highlighting with a card + language label per
+   block. Untagged fences get highlight.js-based language detection gated
+   for precision (short/low-confidence stays plaintext — no wrong labels).
+4. **Files (PDFs, office docs)** go through Cloudflare Workers AI
+   `toMarkdown` (`lib/cloudflare.ts`) when `CLOUDFLARE_ACCOUNT_ID` +
+   `CLOUDFLARE_API_TOKEN` are set — the same REST call works from Node
+   today or Workers later. Unset or failed conversions fall back to link
+   bookmarks.
+5. **arXiv papers** get the full treatment in `lib/arxiv.ts`: any
+   abstract/PDF/ar5iv URL → ar5iv HTML through the clipper for full text,
+   merged with export.arxiv.org metadata (authors, version dates,
+   categories → tags); the real PDF via Cloudflare conversion fills ar5iv
+   gaps before falling back to the abstract page and then a bookmark.
+
+Two server adaptations were required (both documented in code): the
+clipper's `window`/`document` globals poison server runtimes, so
+`lib/clipper.ts` installs only bare `DOMParser`/`DEBUG_MODE` globals (plus
+a one-time guarded priming for Turndown), and `instrumentation.ts` warms
+the pipeline at boot. There is also a one-line fix in vendored `src/api.ts`
+(pass the full Document to Defuddle; element input extracts to empty with
+linkedom).
+
+The **source URL is the canonical identifier**: re-saving a URL refreshes the
+existing document (same id, `reprocessed: true`) instead of duplicating it.
+`POST /api/items/[id]/reprocess` does the same on demand from the reader.
+
+The reader defaults to the extracted **Reader** view (distraction-free,
+metadata line, copy-Markdown) with an **Original** tab for the live page.
+Failed extractions record `extractionError` and fall back to the original —
+never an empty document, never a 500.
+
 ## CLI
 
 ```bash
 cd cli && npm install -g ./        # installs `hoard`
-hoard login my-laptop              # paste token from Settings → Tokens
+hoard login my-laptop --api-url https://hoard.<you>.workers.dev
 hoard search "markdown"
 hoard save https://example.com
 hoard export ./hoard-export        # front-matter .md files
@@ -55,8 +138,11 @@ Config lives at `~/.hoard/config.json` (`{ apiUrl, token, client }`). No token �
 - `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` (every PATCH → new `NoteRevision`)
 - `GET /api/search?q=`, `GET/POST /api/tokens`, `GET /api/tags`
 
-Every query is owner-scoped by `userId`. See `prisma/schema.prisma` — switch `provider` to `postgresql` for pgvector (search has a `// TODO: pgvector` seam in `lib/search.ts`).
+Every query is owner-scoped by `userId`. Auth is PBKDF2-HMAC-SHA256 sessions
+(WebCrypto — `lib/auth.ts`); passwords from the pre-Workers scrypt format
+don't transfer, so the seed uses the new format. Search is keyword today
+(D1 has no pgvector; Vectorize is the future seam).
 
 ## iOS
 
-See `README-ios.md` + `ios/` (KeepKit package, SwiftUI app, Share Extension, XcodeGen `project.yml`).
+See `README-ios.md` + `ios/` (KeepKit package, SwiftUI app, Share Extension, XcodeGen `project.yml`). Point `HoardAPIBaseURL` at the deployed Worker URL.

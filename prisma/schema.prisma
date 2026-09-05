@@ -38,12 +38,18 @@ model Item {
   markdown  String   @default("")
   excerpt   String   @default("")
   status    String   @default("inbox") // inbox|saved|archived|done
+  // Reader pipeline metadata (Defuddle extraction)
+  author          String?
+  publishedAt     DateTime?
+  extractedAt     DateTime?
+  extractionError String?
   createdAt DateTime @default(now())
   tags      ItemTag[]
   highlights Highlight[]
   noteLinks NoteSource[]
 
   @@index([userId, status])
+  @@index([userId, sourceUrl])
   @@map("items")
 }
 

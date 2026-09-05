@@ -24,7 +24,7 @@ export function ItemList({ statusFilter, emptyHint }: { statusFilter?: string; e
     try {
       const q = statusFilter ? `?status=${statusFilter}` : "";
       const res = await fetch(`/api/items${q}`);
-      const data = await res.json();
+      const data: unknown = await res.json();
       const list: Item[] = Array.isArray(data) ? data : [];
       setItems(statusFilter ? list : list.filter((i) => i.status !== "archived"));
     } catch {

@@ -5,31 +5,47 @@
   "description": "Hoard — save anything as clean Markdown for humans and agents.",
   "type": "commonjs",
   "scripts": {
-    "setup": "prisma generate && prisma db push && tsx prisma/seed.ts",
+    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start",
-    "seed": "tsx prisma/seed.ts"
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "db:diff": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "db:seed": "wrangler d1 execute hoard --local --file=db/seed.sql"
   },
   "dependencies": {
-    "@mozilla/readability": "^0.6.0",
+    "@opennextjs/cloudflare": "^1.20.6",
+    "@prisma/adapter-d1": "^6.19.3",
     "@prisma/client": "^6.19.3",
-    "jsdom": "^30.0.1",
+    "@shikijs/rehype": "^4.4.3",
+    "dayjs": "^1.11.23",
+    "defuddle": "^0.19.3",
+    "highlight.js": "^11.12.0",
+    "knap": "^0.2.3",
+    "linkedom": "^0.18.13",
     "next": "^15.5.25",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "turndown": "^7.2.4"
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "shiki": "^4.4.3",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/jsdom": "^30.0.0",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@types/turndown": "^5.0.6",
+    "@types/webextension-polyfill": "^0.12.6",
+    "esbuild": "^0.28.2",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.129.0"
   }
 }

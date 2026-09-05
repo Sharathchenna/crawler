@@ -3,20 +3,20 @@ import Foundation
 public enum APIError: LocalizedError {
   case notAuthenticated
   case serverMessage(String)
-  case decoding
-  case offline
+  case decoding(String)
+  case transport(Error)
 
   public var errorDescription: String? {
     switch self {
     case .notAuthenticated: return "Sign in first — your library is private to you."
     case .serverMessage(let m): return m
-    case .decoding: return "Couldn't read the server's reply. Try again."
-    case .offline: return "You're offline. Saved to the outbox — we'll send it later."
+    case .decoding(let m): return "Couldn't read the server's reply (\(m)). Pull to retry."
+    case .transport(let e): return "Network hiccup — \(e.localizedDescription)"
     }
   }
 }
 
-/// Generic bearer-token client. Same auth path agents use over MCP/CLI.
+/// Bearer-token client. Same auth path agents use over MCP/CLI.
 public final class APIClient: Sendable {
   public let baseURL: URL
   public let token: @Sendable () -> String?
@@ -26,59 +26,84 @@ public final class APIClient: Sendable {
     self.token = token
   }
 
-  private var decoder: JSONDecoder {
+  public static func makeDecoder() -> JSONDecoder {
     let d = JSONDecoder()
-    d.dateDecodingStrategy = .iso8601
+    d.dateDecodingStrategy = .custom { dec in
+      let c = try dec.singleValueContainer()
+      // Null → throw; optionals handle null before reaching here.
+      let s = try c.decode(String.self)
+      if let dt = HoardDates.parse(s) { return dt }
+      throw DecodingError.dataCorruptedError(in: c, debugDescription: "bad date: \(s)")
+    }
     return d
   }
 
   @discardableResult
   public func request<T: Decodable>(_ path: String, method: String = "GET", body: Encodable? = nil) async throws -> T {
     guard let tok = token(), !tok.isEmpty else { throw APIError.notAuthenticated }
-    var req = URLRequest(url: baseURL.appendingPathComponent(path))
+    guard let url = URL(string: path, relativeTo: baseURL) else {
+      throw APIError.serverMessage("Bad request path.")
+    }
+    var req = URLRequest(url: url)
     req.httpMethod = method
+    req.timeoutInterval = 30
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization")
     if let body {
       req.httpBody = try JSONEncoder().encode(AnyEncodable(body))
     }
-    let (data, _) = try await URLSession.shared.data(for: req)
-    if let err = try? decoder.decode(ErrorPayload.self, from: data), !err.error.isEmpty {
-      // Heuristic: {error} payloads come with non-2xx; try to detect via message presence + failed decode below.
-      // Attempt the success decode first; fall back to the error.
-      if (try? decoder.decode(T.self, from: data)) == nil {
+    let data: Data
+    let response: URLResponse
+    do {
+      (data, response) = try await URLSession.shared.data(for: req)
+    } catch {
+      throw APIError.transport(error)
+    }
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    let decoder = Self.makeDecoder()
+    if !(200...299).contains(status) {
+      if let err = try? decoder.decode(ErrorPayload.self, from: data), !err.error.isEmpty {
         throw APIError.serverMessage(err.error)
       }
+      if let err = try? JSONDecoder().decode(ErrorPayload.self, from: data), !err.error.isEmpty {
+        throw APIError.serverMessage(err.error)
+      }
+      throw APIError.serverMessage("Request failed (\(status)). Try again.")
     }
     do {
       return try decoder.decode(T.self, from: data)
     } catch {
-      if let err = try? decoder.decode(ErrorPayload.self, from: data) {
+      // Server sometimes wraps errors with 2xx? Surface {error} if present.
+      if let err = try? decoder.decode(ErrorPayload.self, from: data), !err.error.isEmpty {
         throw APIError.serverMessage(err.error)
       }
-      throw APIError.decoding
+      throw APIError.decoding(error.localizedDescription)
     }
   }
 
-  // MARK: - Endpoints
+  // MARK: - Auth
 
   public struct TokenResponse: Decodable { public var token: String }
 
   public static func signInForToken(baseURL: URL, email: String, password: String) async throws -> String {
     var req = URLRequest(url: baseURL.appendingPathComponent("/api/auth/token"))
     req.httpMethod = "POST"
+    req.timeoutInterval = 20
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     req.httpBody = try JSONEncoder().encode(["email": email, "password": password])
-    let (data, _) = try await URLSession.shared.data(for: req)
-    let d = JSONDecoder()
-    if let err = try? d.decode(ErrorPayload.self, from: data) {
-      // If it also decodes as token, prefer token; else throw.
-      if (try? d.decode(TokenResponse.self, from: data)) == nil {
+    let (data, response) = try await URLSession.shared.data(for: req)
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    let d = makeDecoder()
+    if !(200...299).contains(status) {
+      if let err = try? d.decode(ErrorPayload.self, from: data) {
         throw APIError.serverMessage(err.error)
       }
+      throw APIError.serverMessage("Wrong email or password. Try again.")
     }
     return try d.decode(TokenResponse.self, from: data).token
   }
+
+  // MARK: - Capture
 
   public func capture(url: String) async throws -> HoardItem {
     try await request("/api/capture", method: "POST", body: ["url": url])
@@ -88,45 +113,61 @@ public final class APIClient: Sendable {
     try await request("/api/capture", method: "POST", body: ["title": title, "text": text])
   }
 
+  // MARK: - Items
+
   public func items(status: String? = nil) async throws -> [HoardItem] {
-    // /api/items returns tags as [String]; map through a lenient DTO.
-    struct DTO: Decodable {
-      var id: String; var type: String; var title: String
-      var sourceUrl: String?; var markdown: String; var excerpt: String
-      var status: String; var createdAt: Date
-    }
     let path = status.map { "/api/items?status=\($0)" } ?? "/api/items"
-    let rows: [DTO] = try await request(path)
-    return rows.map {
-      HoardItem(id: $0.id, type: $0.type, title: $0.title, sourceUrl: $0.sourceUrl,
-                markdown: $0.markdown, excerpt: $0.excerpt, status: $0.status,
-                createdAt: $0.createdAt, tags: nil)
-    }
+    return try await request(path)
+  }
+
+  public func item(id: String) async throws -> HoardItem {
+    try await request("/api/items/\(id)")
   }
 
   public func updateItem(id: String, status: String) async throws -> HoardItem {
+    // PATCH returns the bare row (no tags key) — decode leniently.
     struct DTO: Decodable {
       var id: String; var type: String; var title: String
       var sourceUrl: String?; var markdown: String; var excerpt: String
       var status: String; var createdAt: Date
+      var tags: [String]?
+      var author: String?; var publishedAt: Date?; var extractedAt: Date?
+      var extractionError: String?
     }
     let row: DTO = try await request("/api/items/\(id)", method: "PATCH", body: ["status": status])
     return HoardItem(id: row.id, type: row.type, title: row.title, sourceUrl: row.sourceUrl,
                      markdown: row.markdown, excerpt: row.excerpt, status: row.status,
-                     createdAt: row.createdAt, tags: nil)
+                     createdAt: row.createdAt, tags: row.tags, author: row.author,
+                     publishedAt: row.publishedAt, extractedAt: row.extractedAt,
+                     extractionError: row.extractionError)
   }
 
-  public func item(id: String) async throws -> HoardItem {
+  public func deleteItem(id: String) async throws {
+    struct Ok: Decodable { var ok: Bool? }
+    let _: Ok = try await request("/api/items/\(id)", method: "DELETE")
+  }
+
+  public func reprocess(id: String) async throws -> HoardItem {
     struct DTO: Decodable {
       var id: String; var type: String; var title: String
       var sourceUrl: String?; var markdown: String; var excerpt: String
       var status: String; var createdAt: Date; var tags: [String]?
+      var author: String?; var publishedAt: Date?; var extractedAt: Date?
+      var extractionError: String?
     }
-    let row: DTO = try await request("/api/items/\(id)")
+    let row: DTO = try await request("/api/items/\(id)/reprocess", method: "POST")
     return HoardItem(id: row.id, type: row.type, title: row.title, sourceUrl: row.sourceUrl,
                      markdown: row.markdown, excerpt: row.excerpt, status: row.status,
-                     createdAt: row.createdAt, tags: row.tags)
+                     createdAt: row.createdAt, tags: row.tags, author: row.author,
+                     publishedAt: row.publishedAt, extractedAt: row.extractedAt,
+                     extractionError: row.extractionError)
   }
+
+  public func tags() async throws -> [HoardTag] {
+    try await request("/api/tags")
+  }
+
+  // MARK: - Notes
 
   public func notes() async throws -> [HoardNote] {
     try await request("/api/notes")
@@ -140,18 +181,32 @@ public final class APIClient: Sendable {
     try await request("/api/notes", method: "POST", body: ["title": title])
   }
 
-  public func saveNote(id: String, markdown: String, summary: String) async throws -> HoardNote {
-    try await request("/api/notes/\(id)", method: "PATCH", body: ["markdown": markdown, "summary": summary])
+  public func saveNote(id: String, title: String? = nil, markdown: String, summary: String) async throws -> HoardNote {
+    var payload: [String: String] = ["markdown": markdown, "summary": summary]
+    if let title { payload["title"] = title }
+    return try await request("/api/notes/\(id)", method: "PATCH", body: payload)
   }
 
+  public func deleteNote(id: String) async throws {
+    struct Ok: Decodable { var ok: Bool? }
+    let _: Ok = try await request("/api/notes/\(id)", method: "DELETE")
+  }
+
+  // MARK: - Search / tokens
+
   public func search(q: String) async throws -> [SearchHit] {
-    try await request("/api/search?q=\(q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
+    let encoded = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+    return try await request("/api/search?q=\(encoded)")
   }
 
   public func issueToken() async throws -> String {
     struct Out: Decodable { var token: String }
     let out: Out = try await request("/api/tokens", method: "POST", body: ["client": "ios"])
     return out.token
+  }
+
+  public func tokenRows() async throws -> [AgentTokenRow] {
+    try await request("/api/tokens")
   }
 }
 
