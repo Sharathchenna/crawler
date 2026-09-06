@@ -53,6 +53,7 @@ export async function userFromHeaders(headers: Headers): Promise<AuthedUser | nu
         await touchToken(row.id);
         return { id: row.user.id, email: row.user.email, plan: row.user.plan };
       }
+      console.log("[auth-debug] unknown bearer, len=", token.length, "head=", token.slice(0, 12), "tail=", token.slice(-6));
       return null;
     }
   }
