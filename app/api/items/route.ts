@@ -15,12 +15,16 @@ export async function GET(req: Request) {
     .filter(Boolean)
     .slice(0, 8);
   const tag = (searchParams.get("tag") ?? "").trim().toLowerCase().slice(0, 40);
+  // Named source collections (mirrors the sidebar sections).
+  const source = (searchParams.get("source") ?? "").trim().toLowerCase();
+  const sourceMatch: string[] = source === "arxiv" ? ["arxiv.org", "ar5iv"] : [];
   const items = await getDb().item.findMany({
     where: {
       userId: user.id,
       ...(status && VALID_STATUS.has(status) ? { status } : {}),
       ...(types.length ? { type: { in: types } } : {}),
       ...(tag ? { tags: { some: { tag: { userId: user.id, name: tag } } } } : {}),
+      ...(sourceMatch.length ? { OR: sourceMatch.map((s) => ({ sourceUrl: { contains: s } })) } : {}),
     },
     include: { tags: { include: { tag: true } } },
     orderBy: { createdAt: "desc" },

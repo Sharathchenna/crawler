@@ -89,6 +89,7 @@ capture auto-classifies by URL and type:
 - **Repos** (`/repos`) — `github.com/<owner>/<repo>` links, detected at capture.
 - **Tweets** (`/tweets`) — X posts and threads (`type: x`).
 - **Articles** (`/articles`) — pages + PDFs.
+- **Research papers** (`/papers`) — arXiv/ar5iv links with full text (`?source=arxiv`).
 - Notes keep their own page; Library stays the full firehose.
 
 Filter programmatically with `GET /api/items?type=x,repo` and

@@ -13,6 +13,7 @@ const NAV = [
   { href: "/repos", label: "Repos", icon: "⎇" },
   { href: "/tweets", label: "Tweets", icon: "✕" },
   { href: "/articles", label: "Articles", icon: "◱" },
+  { href: "/papers", label: "Research papers", icon: "◈" },
   { href: "/search", label: "Search", icon: "⌕" },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];

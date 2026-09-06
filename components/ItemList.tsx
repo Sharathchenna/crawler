@@ -41,11 +41,13 @@ export function ItemList({
   statusFilter,
   typeFilter,
   tagFilter,
+  sourceFilter,
   emptyHint,
 }: {
   statusFilter?: string;
   typeFilter?: string;
   tagFilter?: string;
+  sourceFilter?: string;
   emptyHint: string;
 }) {
   const [items, setItems] = useState<Item[]>([]);
@@ -60,6 +62,7 @@ export function ItemList({
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("type", typeFilter);
       if (tagFilter) params.set("tag", tagFilter);
+      if (sourceFilter) params.set("source", sourceFilter);
       const qs = params.size ? `?${params}` : "";
       // no-store: a cached list is exactly how a just-saved item goes missing.
       const res = await fetch(`/api/items${qs}`, { cache: "no-store" });
@@ -93,7 +96,7 @@ export function ItemList({
       document.removeEventListener("visibilitychange", onVis);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, typeFilter, tagFilter]);
+  }, [statusFilter, typeFilter, tagFilter, sourceFilter]);
 
   async function setStatus(id: string, status: string) {
     const res = await fetch(`/api/items/${id}`, {
