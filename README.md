@@ -44,6 +44,8 @@ wrangler d1 create hoard
 wrangler d1 execute hoard --remote --file=db/migrations/0001_init.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0003_qmd_fts.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0004_discovery_schedule.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0005_discovery_images.sql
 wrangler d1 execute hoard --remote --file=db/seed.sql
 # Existing DBs: 0002 and 0003 are additive — safe to apply on top.
 
@@ -94,17 +96,18 @@ Filter programmatically with `GET /api/items?type=x,repo` and
 
 ## Discover — a finite alternative to scrolling X
 
-Open **Discover** (`/discover`) and describe what you want to learn. Optionally
-add up to three favourite blog URLs, then choose a 10, 20, or 30 minute budget.
-Tinyfish browses blogs and searches for related authors, opens candidate posts,
-and returns up to **five articles** with summaries and reasons to read them.
+Open **Discover** (`/discover`) for an automatic daily tech digest. In **Sources
+and daily preferences**, enable the schedule, choose your interests, sources,
+and a 10, 20, or 30 minute budget. Scheduled editions target two carefully read
+articles, with a hard maximum of **five**. Manual discovery also accepts up to
+three favourite blog URLs when the daily schedule is paused.
 The server enforces the article and estimated reading-time caps, strips common
 tracking parameters, excludes recent previously discovered/saved URLs (up to
 200 of each), and limits each domain to two articles.
 
 Save an article into Hoard's existing Markdown reader, mark it read, or skip it.
 The edition has an end: **one edition per UTC day**, no infinite scrolling or
-rerolling a completed list. Failed crawls get one explicit retry. Reading state
+rerolling a completed list. Failed manual crawls get one explicit retry. Reading state
 and crawl IDs live in D1 and are private to your account. Preferences from your
 last edition are prefilled next time.
 
@@ -114,6 +117,7 @@ For an existing local installation:
 
 ```bash
 npm run db:discovery       # generate Prisma client + apply additive local migration
+npm run db:discovery-schedule # apply 0004 once to an existing database
 # Add TINYFISH_API_KEY="..." to .env for next dev
 npm run dev
 ```
@@ -127,22 +131,56 @@ For production, apply the migration and add the secret before deploying:
 
 ```bash
 npx wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
+npx wrangler d1 execute hoard --remote --file=db/migrations/0004_discovery_schedule.sql
+npx wrangler d1 execute hoard --remote --file=db/migrations/0005_discovery_images.sql
 npx wrangler secret put TINYFISH_API_KEY
 npm run deploy
 ```
 
-Discovery uses Tinyfish's paid Agent `run-async` API with a five-minute run
-budget, then polls the stored run ID. There is no automatic daily crawl or cron:
-you explicitly start each day's edition. Leaving the page does not cancel the
-provider run; reopening it retrieves and persists the result. Polling is leased
-in D1 to avoid duplicate checks across tabs. A native D1 batch atomically commits
-the result (the Prisma D1 adapter does not support transactions).
+The separate **`hoard-discovery` Worker** (`workers/discovery.ts`, configured in
+`wrangler.discovery.jsonc`) checks every five minutes. After **01:00 UTC**, it
+claims one edition per enabled user/day, collects public RSS/Atom feeds and HN's
+official API, and gives Tinyfish a fresh, diverse shortlist. It checks only up to
+30-day-old feed posts and 3-day-old HN stories, excludes previously seen URLs,
+and rotates category priority daily. The catalogue is in
+`lib/discovery-sources.ts`; see [source choices](docs/discovery-sources.md).
+
+Tinyfish runs asynchronously with a five-minute browser budget. Subsequent cron
+ticks persist the result **even if nobody opens the app**. Leases and the shared
+unique daily key prevent duplicate starts across cron/manual requests. There is
+at most one paid run per automatic edition; unavailable browser summaries fall
+back to clearly attributed **publisher previews**, never invented AI summaries.
+The five-minute poll interval is not a new crawl every five minutes. Feed health
+and failures appear on Discover. Saved editions remain accessible in the edition
+selector (most recent 30). Native D1 batches atomically persist articles.
+
+Deploy the scheduler separately (it shares the existing D1 database):
+
+```bash
+# Both secrets belong to hoard-discovery, not just the main crawler Worker.
+npx wrangler secret put TINYFISH_API_KEY --config wrangler.discovery.jsonc
+npx wrangler secret put CRON_SECRET --config wrangler.discovery.jsonc
+npm run discovery:deploy
+```
+
+`CRON_SECRET` is a randomly generated secret for the optional operational
+`POST /run` endpoint (Bearer auth); cron itself requires no HTTP call or Access
+service token. It can be used to check the scheduler after deployment. It does
+not bypass the daily cap. For local cron tests use `wrangler dev --config
+wrangler.discovery.jsonc --test-scheduled` and `/cdn-cgi/local/scheduled`.
+Secrets for local Wrangler development go in `.dev.vars`.
+
+Schedules are disabled until enabled once for an account. Pause them or change
+topics/sources in Discover. Subscription-only newsletter content is not unlocked.
+No X API is required. Tinyfish Agent usage draws from your Tinyfish wallet; feed
+discovery itself requires no paid third-party search API.
 
 API (existing Access/bearer authentication):
 
-- `GET /api/discover` — configuration status, preferences, today's edition; polls active runs.
+- `GET /api/discover?day=YYYY-MM-DD` — configuration, schedule, edition history and results; polls active manual runs.
 - `POST /api/discover` — `{ "topics": "…", "seeds": [], "budget": 20 }`; starts or returns today's edition.
 - `PATCH /api/discover` — `{ "id": "article-id", "status": "read" }`; status is `unread|read|skipped|saved`.
+- `PUT /api/discover` — `{ "enabled": true, "topics": "…", "budget": 30, "sourceIds": ["hn", "simon", "latent"] }`; update your daily schedule.
 - Saving uses existing `POST /api/capture { url }`, then marks the discovery article `saved`.
 
 Verify with `npm run test:discovery` (mocked Tinyfish HTTP, real isolated local

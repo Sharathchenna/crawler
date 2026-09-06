@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { boundedJson, normalizeArticles, parseDiscoveryInput, publicBlogUrl, record } from "@/lib/discovery";
 import { getDiscoveryRun, startDiscovery, tinyfishConfigured } from "@/lib/tinyfish";
 import { completeDigest } from "@/lib/discovery-store";
+import { DEFAULT_TOPICS, DISCOVERY_SOURCES, nextEditionAt } from "@/lib/discovery-sources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,10 +25,11 @@ async function excludedUrls(userId: string): Promise<string[]> {
     .map(publicBlogUrl).filter((url): url is string => Boolean(url)))];
 }
 
-async function view(userId: string) {
+async function view(userId: string, day = today()) {
   const db = getDb();
+  const schedule = await db.discoverySchedule.findUnique({ where: { userId } });
   const digest = await db.discoveryDigest.findUnique({
-    where: { userId_day: { userId, day: today() } },
+    where: { userId_day: { userId, day } },
     include: { articles: { orderBy: { position: "asc" } } },
   });
   const previous = digest ?? await db.discoveryDigest.findFirst({ where: { userId }, orderBy: { day: "desc" } });
@@ -36,13 +38,20 @@ async function view(userId: string) {
   }) : [];
   return {
     configured: tinyfishConfigured(),
+    editionDay: day,
+    editions: await db.discoveryDigest.findMany({ where: { userId }, orderBy: { day: "desc" }, take: 30, select: { day: true, status: true } }),
     preferences: previous ? { topics: previous.topics, seeds: JSON.parse(previous.seeds), budget: previous.budget } : null,
+    schedule: schedule ? { enabled: schedule.enabled, topics: schedule.topics, budget: schedule.budget,
+      sourceIds: JSON.parse(schedule.sourceIds), nextRunAt: nextEditionAt(), lastRunAt: schedule.lastRunAt?.toISOString() ?? null,
+      lastError: schedule.lastError, sourceHealth: JSON.parse(schedule.sourceHealth) } : null,
     digest: digest ? {
       id: digest.id, day: digest.day, topics: digest.topics, seeds: digest.seeds,
       budget: digest.budget, status: digest.status, attempts: digest.attempts, error: digest.error,
+      origin: digest.origin,
       articles: digest.articles.map((a) => ({
         id: a.id, url: a.url, title: a.title, author: a.author, summary: a.summary,
         reason: a.reason, minutes: a.minutes, status: a.status,
+        imageUrl: (a as { imageUrl?: string }).imageUrl ?? "",
         itemId: items.find((item) => item.sourceUrl === a.url)?.id ?? null,
       })),
     } : null,
@@ -53,14 +62,16 @@ export async function GET(req: Request) {
   const user = await requireUser(req);
   if (!user) return json({ error: "Sign in to discover articles." }, 401);
   const db = getDb();
+  const day = new URL(req.url).searchParams.get("day") ?? today();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day > today()) return json({ error: "Choose an existing edition date." }, 400);
   try {
-    const digest = await db.discoveryDigest.findUnique({ where: { userId_day: { userId: user.id, day: today() } } });
-    if (digest?.status === "starting" && Date.now() - digest.startedAt.getTime() > 120_000) {
+    const digest = await db.discoveryDigest.findUnique({ where: { userId_day: { userId: user.id, day } } });
+    if (digest?.origin !== "scheduled" && digest?.status === "starting" && Date.now() - digest.startedAt.getTime() > 120_000) {
       await db.discoveryDigest.updateMany({ where: { id: digest.id, status: "starting", startedAt: digest.startedAt }, data: {
         status: "failed", error: "The crawl could not be started. You can retry once today.",
       } });
     }
-    if (digest?.status === "running" && digest.runId) {
+    if (digest?.origin !== "scheduled" && digest?.status === "running" && digest.runId) {
       // Database-backed polling lease: parallel tabs cannot flood Tinyfish, and
       // one failed polling request does not discard the durable provider run ID.
       const lease = await db.discoveryDigest.updateMany({
@@ -90,7 +101,7 @@ export async function GET(req: Request) {
         }
       }
     }
-    return json(await view(user.id));
+    return json(await view(user.id, day));
   } catch (error) {
     console.error(JSON.stringify({ event: "discovery_poll_failed", message: message(error) }));
     return json({ error: message(error) }, 502);
@@ -149,11 +160,26 @@ export async function PATCH(req: Request) {
     return json({ error: "Choose unread, read, skipped, or saved." }, 400);
   }
   const db = getDb();
-  const article = await db.discoveryArticle.findFirst({ where: { id: body.id, digest: { userId: user.id } } });
+  const article = await db.discoveryArticle.findFirst({ where: { id: body.id, digest: { userId: user.id } }, include: { digest: { select: { day: true } } } });
   if (!article) return json({ error: "Article not found." }, 404);
   if (body.status === "saved" && !await db.item.findFirst({ where: { userId: user.id, sourceUrl: article.url } })) {
     return json({ error: "Save the article to your library first." }, 400);
   }
   await db.discoveryArticle.update({ where: { id: article.id }, data: { status: body.status } });
-  return json(await view(user.id));
+  return json(await view(user.id, article.digest.day));
+}
+
+export async function PUT(req: Request) {
+  const user = await requireUser(req);
+  if (!user) return json({ error: "Sign in to update your daily schedule." }, 401);
+  try {
+    const body = record(await boundedJson(req, 8_192));
+    if (typeof body.enabled !== "boolean") throw new Error("Choose whether daily discovery is enabled.");
+    const input = parseDiscoveryInput({ topics: body.topics ?? DEFAULT_TOPICS, budget: body.budget ?? 30, seeds: [] });
+    const allowed = new Set<string>(DISCOVERY_SOURCES.map((source) => source.id));
+    if (!Array.isArray(body.sourceIds) || !body.sourceIds.length || body.sourceIds.length > allowed.size || body.sourceIds.some((id) => typeof id !== "string" || !allowed.has(id))) throw new Error("Choose at least one source from the collection.");
+    const data = { enabled: body.enabled, topics: input.topics, budget: input.budget, sourceIds: JSON.stringify([...new Set(body.sourceIds)]) };
+    await getDb().discoverySchedule.upsert({ where: { userId: user.id }, create: { userId: user.id, ...data }, update: data });
+    return json(await view(user.id));
+  } catch (error) { return json({ error: message(error) }, 400); }
 }

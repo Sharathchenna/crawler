@@ -23,7 +23,7 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), { stat
 before(async () => {
   mf = new Miniflare(convertV4MiniflareOptions({ modules: true, script: "export default { fetch() { return new Response('ok'); } }", d1Databases: ["DB"], compatibilityDate: "2024-12-30" }));
   const binding = await mf.getD1Database("DB");
-  for (const file of ["0001_init.sql", "0002_discovery.sql"]) {
+  for (const file of ["0001_init.sql", "0002_discovery.sql", "0004_discovery_schedule.sql", "0005_discovery_images.sql"]) {
     const sql = await readFile(`db/migrations/${file}`, "utf8");
     for (const statement of sql.split(";").filter((s) => s.trim())) await binding.prepare(statement).run();
   }
@@ -32,7 +32,7 @@ before(async () => {
   scratch = await mkdtemp(path.resolve("node_modules/.discovery-test-"));
   const outfile = path.join(scratch, "handlers.cjs");
   await build({
-    stdin: { contents: 'export * from "./app/api/discover/route"; export * from "./lib/discovery"; export * from "./lib/discovery-store";', resolveDir: process.cwd(), loader: "ts" },
+    stdin: { contents: 'export * from "./app/api/discover/route"; export * from "./lib/discovery"; export * from "./lib/discovery-store"; export * from "./lib/discovery-feeds"; export * from "./lib/discovery-sources"; export * from "./workers/discovery";', resolveDir: process.cwd(), loader: "ts" },
     bundle: true, platform: "node", format: "cjs", packages: "external", outfile,
     plugins: [{ name: "test-bindings", setup(builder) {
       builder.onResolve({ filter: /^(@\/lib\/(auth|db)|@opennextjs\/cloudflare)$/ }, (args) => ({ path: args.path, namespace: "test-binding" }));
@@ -164,4 +164,81 @@ test("article state is owner-scoped, saved links are verified and read state per
   assert.equal((await api.PATCH(req("PATCH", { id, status: "saved" }))).status, 400);
   assert.equal((await api.PATCH(req("PATCH", { id, status: "read" }))).status, 200);
   assert.equal((await (await api.GET(req())).json()).digest.articles[0].status, "read");
+});
+
+test("RSS and Atom parsing handle CDATA, escaped text, invalid links and old posts", () => {
+  const source = api.DISCOVERY_SOURCES.find((s) => s.id === "simon");
+  const now = new Date("2026-09-07T01:00:00Z");
+  const rss = `<rss><channel><item><title>Tools &amp; systems</title><link>https://example.org/post?utm_source=rss</link><pubDate>Sun, 06 Sep 2026 12:00:00 GMT</pubDate><description><![CDATA[<p>A useful <b>explanation</b>.</p><script>bad()</script>]]></description></item><item><title>Old</title><link>https://example.org/old</link><pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate></item></channel></rss>`;
+  const articles = api.parseFeed(rss, source, now);
+  assert.equal(articles.length, 1);
+  assert.equal(articles[0].url, "https://example.org/post");
+  assert.equal(articles[0].title, "Tools & systems");
+  assert.equal(articles[0].excerpt, "A useful explanation.");
+  const atom = `<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>New</title><link rel="self" href="https://example.org/feed-entry"/><link rel="alternate" href="https://example.org/article"/><published>2026-09-06T12:00:00Z</published><summary>Readable</summary></entry></feed>`;
+  assert.equal(api.parseFeed(atom, source, now)[0].url, "https://example.org/article");
+  assert.throws(() => api.parseFeed("<html>Blocked</html>", source, now), /Not an RSS/);
+});
+
+test("daily preferences validate sources and remain private to their owner", async () => {
+  assert.equal((await api.PUT(req("PUT", { enabled:true, sourceIds:["unknown"] }))).status, 400);
+  assert.equal((await api.PUT(req("PUT", { enabled:true, sourceIds:["simon", "hn"] }))).status, 200);
+  assert.equal((await (await api.GET(req())).json()).schedule.enabled, true);
+  assert.equal((await (await api.GET(req("GET", undefined, "other"))).json()).schedule, null);
+});
+
+test("scheduler starts once across concurrent ticks and finishes without a page visit", async () => {
+  const now = new Date("2026-09-07T01:00:00Z");
+  await db.discoverySchedule.create({ data:{userId:"reader",enabled:true,topics:"AI tools",budget:20,sourceIds:'["simon"]'} });
+  let starts = 0;
+  mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).includes("run-async")) { starts++; return json({run_id:"daily-run"}); }
+    if (String(url).includes("/v1/runs/")) return json({status:"COMPLETED",result:{articles:[article("https://simonwillison.net/test-post")]}});
+    return new Response(`<feed><entry><title>AI tools</title><link href="https://simonwillison.net/test-post"/><published>2026-09-06T12:00:00Z</published><summary>Practical tools</summary></entry></feed>`);
+  });
+  const env = { DB:globalThis.__discoveryTest.binding, TINYFISH_API_KEY:"test", CRON_SECRET:"test" };
+  await Promise.all([api.runScheduledDiscovery(env,now),api.runScheduledDiscovery(env,now)]);
+  assert.equal(starts,1);
+  const digest = await db.discoveryDigest.findFirst();
+  assert.equal(digest.origin,"scheduled");
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T01:05:00Z"));
+  assert.equal((await db.discoveryDigest.findFirst()).status,"ready");
+  assert.equal(await db.discoveryArticle.count(),1);
+  assert.equal(starts,1);
+  const schedule = await db.discoverySchedule.findFirst();
+  assert.equal(schedule.lastRunAt.toISOString(),now.toISOString());
+});
+
+test("scheduler publishes attributed previews if Tinyfish fails and does not launch paid retries", async () => {
+  await db.discoverySchedule.create({ data:{userId:"reader",enabled:true,topics:"AI tools",budget:20,sourceIds:'["simon","latent"]'} });
+  let starts = 0;
+  mock.method(globalThis, "fetch", async (url) => {
+    if (String(url).includes("run-async")) { starts++; return json({},503); }
+    if (String(url).includes("latent.space")) return new Response("Unavailable",{status:503});
+    return new Response(`<rss><channel><item><title>Tools</title><link>https://simonwillison.net/test-post</link><pubDate>Sun, 06 Sep 2026 12:00:00 GMT</pubDate><description>A public preview</description></item></channel></rss>`);
+  });
+  const env = { DB:globalThis.__discoveryTest.binding, TINYFISH_API_KEY:"test", CRON_SECRET:"test" };
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T01:00:00Z"));
+  const digest = await db.discoveryDigest.findFirst({include:{articles:true}});
+  assert.equal(digest.status,"ready");
+  assert.match(digest.articles[0].summary,/Publisher preview/);
+  assert.match(digest.articles[0].reason,/not an AI-verified summary/);
+  assert.ok(JSON.parse((await db.discoverySchedule.findFirst()).sourceHealth).some(s=>s.id==="latent" && s.error));
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T02:00:00Z"));
+  assert.equal(starts,1);
+});
+
+test("scheduler honors pause, start time, existing editions, and stale-start recovery", async () => {
+  const env = { DB:globalThis.__discoveryTest.binding, TINYFISH_API_KEY:"test", CRON_SECRET:"test" };
+  const fetch = mock.method(globalThis,"fetch",()=>{throw new Error("Unexpected fetch");});
+  await db.discoverySchedule.create({data:{userId:"reader",enabled:false,topics:"tools",budget:20,sourceIds:'["simon"]'}});
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T01:00:00Z"));
+  assert.equal(await db.discoveryDigest.count(),0);
+  await db.discoverySchedule.update({where:{userId:"reader"},data:{enabled:true}});
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T00:15:00Z"));
+  assert.equal(await db.discoveryDigest.count(),0);
+  await db.discoveryDigest.create({data:{userId:"reader",day:"2026-09-07",topics:"tools",origin:"scheduled",startedAt:new Date("2026-09-07T01:00:00Z")}});
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T01:10:00Z"));
+  assert.equal((await db.discoveryDigest.findFirst()).status,"ready");
+  assert.equal(fetch.mock.callCount(),0);
 });

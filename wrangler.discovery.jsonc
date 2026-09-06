@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hoard-discovery",
+  "main": "workers/discovery.ts",
+  "compatibility_date": "2026-09-06",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "hoard",
+    "database_id": "383a4249-2aeb-4c22-8088-a66353f66a9b"
+  }],
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "observability": { "enabled": true },
+  "secrets": { "required": ["TINYFISH_API_KEY", "CRON_SECRET"] }
+}

@@ -5,8 +5,12 @@
   "description": "Hoard — save anything as clean Markdown for humans and agents.",
   "type": "commonjs",
   "scripts": {
-    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
+    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql && wrangler d1 execute hoard --local --file=db/migrations/0004_discovery_schedule.sql && wrangler d1 execute hoard --local --file=db/migrations/0005_discovery_images.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
+    "db:discovery-images": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0005_discovery_images.sql",
     "db:discovery": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql",
+    "db:discovery-schedule": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0004_discovery_schedule.sql",
+    "discovery:deploy": "wrangler deploy --config wrangler.discovery.jsonc",
+    "discovery:typegen": "wrangler types discovery-worker-env.d.ts --config wrangler.discovery.jsonc --env-interface DiscoveryWorkerEnv --include-runtime false",
     "db:qmd": "wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql",
     "test:discovery": "node --test tests/discovery.test.mjs",
     "test:qmd": "node --test tests/qmd.test.mjs",

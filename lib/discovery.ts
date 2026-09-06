@@ -2,14 +2,19 @@
 export type DiscoveryInput = { topics: string; seeds: string[]; budget: number };
 export type DiscoveredArticle = {
   url: string; title: string; author: string; summary: string; reason: string; minutes: number;
+  imageUrl: string;
 };
 export type DigestView = {
   id: string; day: string; topics: string; seeds: string; budget: number;
   status: string; error: string | null; attempts: number;
+  origin: string;
   articles: (DiscoveredArticle & { id: string; status: string; itemId: string | null })[];
 };
 export type DiscoveryResponse = {
   configured: boolean; digest: DigestView | null; preferences: DiscoveryInput | null;
+  editionDay: string;
+  editions: { day: string; status: string }[];
+  schedule: { enabled: boolean; topics: string; budget: number; sourceIds: string[]; nextRunAt: string; lastRunAt: string | null; lastError: string | null; sourceHealth: import("./discovery-sources").SourceHealth[] } | null;
 };
 
 export function record(value: unknown): Record<string, unknown> {
@@ -77,7 +82,13 @@ export function normalizeArticles(result: unknown, budget: number, excluded: Set
     const minutes = typeof item.minutes === "number" && Number.isFinite(item.minutes)
       ? Math.max(1, Math.ceil(item.minutes)) : 5;
     if (minutes > remaining) continue;
-    articles.push({ url, title, author: text(item.author, 200), summary, reason, minutes });
+    // Optional lead image (og:image reported by Tinyfish, or feed enclosure).
+    // Validated like article URLs (no local/credential targets); "" when absent.
+    const rawImage = typeof item.imageUrl === "string" ? item.imageUrl
+      : typeof item.image === "string" ? item.image
+      : typeof item.ogImage === "string" ? item.ogImage : "";
+    const imageUrl = publicBlogUrl(rawImage) ?? "";
+    articles.push({ url, title, author: text(item.author, 200), summary, reason, minutes, imageUrl });
     seen.add(url);
     domains.set(host, (domains.get(host) ?? 0) + 1);
     remaining -= minutes;
@@ -87,7 +98,7 @@ export function normalizeArticles(result: unknown, budget: number, excluded: Set
 }
 
 /** Bound bodies even when Content-Length is absent or inaccurate. */
-export async function boundedJson(message: Request | Response, maxBytes: number): Promise<unknown> {
+export async function boundedText(message: Request | Response, maxBytes: number): Promise<string> {
   if (!message.body) throw new Error("Empty JSON response.");
   const reader = message.body.getReader();
   const decoder = new TextDecoder();
@@ -104,6 +115,10 @@ export async function boundedJson(message: Request | Response, maxBytes: number)
       }
       content += decoder.decode(value, { stream: true });
     }
-    return JSON.parse(content + decoder.decode());
+    return content + decoder.decode();
   } finally { reader.releaseLock(); }
+}
+
+export async function boundedJson(message: Request | Response, maxBytes: number): Promise<unknown> {
+  return JSON.parse(await boundedText(message, maxBytes));
 }

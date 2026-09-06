@@ -25,6 +25,7 @@ model User {
   sources   Source[]
   tokens    AgentToken[]
   digests   DiscoveryDigest[]
+  discoverySchedule DiscoverySchedule?
 
   @@map("users")
 }
@@ -166,6 +167,8 @@ model DiscoveryDigest {
   error        String?
   startedAt    DateTime @default(now())
   lastPolledAt DateTime?
+  origin       String   @default("manual")
+  candidates   String   @default("[]")
   articles     DiscoveryArticle[]
 
   @@unique([userId, day])
@@ -184,7 +187,22 @@ model DiscoveryArticle {
   minutes     Int
   position    Int
   status      String @default("unread") // unread|read|skipped|saved
+  imageUrl    String @default("")
 
   @@unique([digestId, url])
   @@map("discovery_articles")
+}
+
+model DiscoverySchedule {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled      Boolean  @default(false)
+  topics       String
+  budget       Int      @default(30)
+  sourceIds    String
+  lastRunAt    DateTime?
+  lastError    String?
+  sourceHealth String   @default("[]")
+
+  @@map("discovery_schedules")
 }

@@ -5,8 +5,37 @@ import Link from "next/link";
 import { apiJson } from "@/components/api";
 import { domainOf } from "@/components/Shell";
 import type { DiscoveryResponse, DigestView } from "@/lib/discovery";
+import { DEFAULT_TOPICS, DISCOVERY_SOURCES } from "@/lib/discovery-sources";
 
 type Article = DigestView["articles"][number];
+
+/** Lead-image thumbnail with lazy og:image resolution. Stored imageUrl (feed
+ * enclosure or Tinyfish og:image) renders immediately; cards missing one ask
+ * /api/discover/og once, which backfills the article for later loads.
+ * Falls back to a domain-initial badge — no third-party favicon service. */
+function ArticleThumb({ article }: { article: Article }) {
+  const [src, setSrc] = useState(article.imageUrl || "");
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setSrc(article.imageUrl || "");
+    setFailed(false);
+    if (article.imageUrl) return;
+    let cancelled = false;
+    fetch(`/api/discover/og?url=${encodeURIComponent(article.url)}`)
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json().catch(() => null)) as { imageUrl?: string | null } | null;
+        if (!cancelled && data?.imageUrl) setSrc(data.imageUrl);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [article.id, article.imageUrl, article.url]);
+  if (!src || failed) {
+    const host = domainOf(article.url);
+    return <div aria-hidden="true" className="flex h-20 w-28 shrink-0 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg)] font-mono text-xl text-[var(--text-faint)]">{(host[0] ?? "?").toUpperCase()}</div>;
+  }
+  return <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-20 w-28 shrink-0 rounded-md border border-[var(--border-soft)] object-cover" />;
+}
 const button = "rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-[13px] hover:bg-[var(--bg-hover)] disabled:opacity-50";
 const field = "mt-1.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none";
 
@@ -19,10 +48,15 @@ export default function DiscoverPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showFinished, setShowFinished] = useState(false);
+  const [editionDay, setEditionDay] = useState("");
+  const [dailyEnabled, setDailyEnabled] = useState(true);
+  const [dailyTopics, setDailyTopics] = useState(DEFAULT_TOPICS);
+  const [dailyBudget, setDailyBudget] = useState(30);
+  const [sourceIds, setSourceIds] = useState<string[]>(DISCOVERY_SOURCES.map((source) => source.id));
 
   const load = useCallback(async (initialize = false, signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/discover", { cache: "no-store", signal });
+      const response = await fetch(`/api/discover${editionDay ? `?day=${editionDay}` : ""}`, { cache: "no-store", signal });
       const next = await apiJson<DiscoveryResponse & { error?: string }>(response);
       if (!response.ok) throw new Error(next.error ?? "Could not load discovery.");
       setData(next);
@@ -32,10 +66,14 @@ export default function DiscoverPage() {
         setSeeds(next.preferences.seeds.join("\n"));
         setBudget(next.preferences.budget);
       }
+      if (initialize && next.schedule) {
+        setDailyEnabled(next.schedule.enabled); setDailyTopics(next.schedule.topics);
+        setDailyBudget(next.schedule.budget); setSourceIds(next.schedule.sourceIds);
+      }
     } catch (e) {
       if (!signal?.aborted) setError(e instanceof Error ? e.message : "Could not load discovery.");
     }
-  }, []);
+  }, [editionDay]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,12 +84,12 @@ export default function DiscoverPage() {
   const digest = data?.digest;
   const running = digest?.status === "starting" || digest?.status === "running";
   useEffect(() => {
-    if (!running) return;
+    if (!running && !data?.schedule?.enabled) return;
     const controller = new AbortController();
     // Slow polling is deliberate: there is no live feed to keep watching.
-    const timer = setInterval(() => { void load(false, controller.signal); }, 35_000);
+    const timer = setInterval(() => { void load(false, controller.signal); }, running ? 35_000 : 300_000);
     return () => { clearInterval(timer); controller.abort(); };
-  }, [running, load]);
+  }, [running, data?.schedule?.enabled, load]);
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +106,21 @@ export default function DiscoverPage() {
       }
       setData(next);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not start discovery."); }
+    finally { setBusy(null); }
+  }
+
+  async function saveSchedule(e: React.FormEvent) {
+    e.preventDefault(); setBusy("schedule"); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/discover", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: dailyEnabled, topics: dailyTopics, budget: dailyBudget, sourceIds }),
+      });
+      const next = await apiJson<DiscoveryResponse & { error?: string }>(response);
+      if (!response.ok) throw new Error(next.error ?? "Could not save schedule.");
+      setData(next);
+      setNotice(dailyEnabled ? "Daily discovery is enabled. Results will arrive here automatically." : "Daily discovery is paused.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save schedule."); }
     finally { setBusy(null); }
   }
 
@@ -101,19 +154,60 @@ export default function DiscoverPage() {
 
   const remaining = digest?.articles.filter((a) => a.status === "unread") ?? [];
   const finished = digest?.articles.filter((a) => a.status !== "unread") ?? [];
-  const canStart = !digest || (digest.status === "failed" && digest.attempts < 2);
+  const viewingToday = !editionDay || editionDay === new Date().toISOString().slice(0, 10);
+  const canStart = viewingToday && (!digest || (digest.origin !== "scheduled" && digest.status === "failed" && digest.attempts < 2));
 
   return (
     <div className="space-y-6 text-[var(--text)]">
       <header>
         <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--accent)]">A little curiosity. A clear stopping point.</p>
         <h1 className="text-[26px] font-semibold tracking-[-0.03em]">Discover</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-muted)]">Thoughtful blogs, found for you by Tinyfish. Up to five reads a day, within your reading budget. Save what matters, then get on with your day.</p>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-muted)]">Hacker News, independent blogs and tech newsletters, collected daily. Tinyfish reads a shortlist for you. Up to five reads, then get on with your day.</p>
       </header>
+
+      {data && data.editions.length > 0 && <label className="block text-sm text-[var(--text-muted)]">Edition
+        <select className={field} value={editionDay} onChange={(e) => { setEditionDay(e.target.value); setShowFinished(false); }}>
+          <option value="">Today</option>
+          {data.editions.filter((edition) => edition.day !== new Date().toISOString().slice(0, 10)).map((edition) => <option key={edition.day} value={edition.day}>{edition.day} · {edition.status}</option>)}
+        </select>
+      </label>}
 
       {error && <div role="alert" className="rounded-lg border border-[var(--border)] p-3 text-sm">{error} <button className="ml-2 underline" onClick={() => void load(!data)}>Check again</button></div>}
       {notice && <p role="status" className="text-sm text-[var(--text-muted)]">{notice}</p>}
       {!data && !error && <p role="status" className="text-sm text-[var(--text-muted)]">Loading your daily edition…</p>}
+
+      {data && <section className="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-medium">{data.schedule?.enabled ? "Daily discovery is on" : "Automatic daily discovery"}</h2>
+          <span className="font-mono text-xs text-[var(--text-muted)]">01:00 UTC · every day</span>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{data.schedule?.enabled ? "Your sources are checked automatically, even when this page is closed. Results are usually ready by 01:15 UTC; delayed jobs catch up during the day." : "Enable once to get a fresh edition every day, without starting a crawl yourself."}</p>
+        {data.schedule?.enabled && <p className="mt-2 text-xs text-[var(--text-faint)]">Next daily start: {new Date(data.schedule.nextRunAt).toLocaleString()} (your timezone). {data.schedule.lastRunAt && `Last checked: ${new Date(data.schedule.lastRunAt).toLocaleString()}.`}</p>}
+        {data.schedule?.lastError && <p className="mt-2 text-xs text-[var(--text-muted)]" role="status">{data.schedule.lastError}</p>}
+        <details className="mt-4" open={!data.schedule}>
+          <summary className="cursor-pointer text-sm text-[var(--accent)]">Sources and daily preferences</summary>
+          <form onSubmit={saveSchedule} className="mt-4 space-y-4">
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dailyEnabled} onChange={(e) => setDailyEnabled(e.target.checked)} /> Automatically prepare a daily edition</label>
+            <label className="block text-sm">Interests<textarea className={field} rows={3} minLength={3} maxLength={500} required value={dailyTopics} onChange={(e) => setDailyTopics(e.target.value)} /></label>
+            <label className="block text-sm">Reading budget<select className={field} value={dailyBudget} onChange={(e) => setDailyBudget(Number(e.target.value))}>{[10, 20, 30].map((n) => <option key={n} value={n}>{n} minutes</option>)}</select></label>
+            <fieldset className="space-y-3">
+              <legend className="mb-3 text-sm font-medium">Your source collection</legend>
+              {DISCOVERY_SOURCES.map((source) => {
+                const health = data.schedule?.sourceHealth.find((entry) => entry.id === source.id);
+                return <div key={source.id} className="flex items-start gap-2">
+                  <input id={`source-${source.id}`} className="mt-1" type="checkbox" checked={sourceIds.includes(source.id)} onChange={(e) => setSourceIds((ids) => e.target.checked ? [...ids, source.id] : ids.filter((id) => id !== source.id))} />
+                  <div className="text-sm"><label htmlFor={`source-${source.id}`} className="font-medium">{source.name}</label> <a href={source.url} target="_blank" rel="noopener noreferrer" aria-label={`Visit ${source.name}`} className="text-[var(--accent)]">↗</a>
+                    <p className="text-xs leading-5 text-[var(--text-muted)]">{source.description}</p>
+                    {health && <p className="text-[11px] text-[var(--text-faint)]">{health.error ? `Last check: ${health.error}` : `${health.count} recent links on last check`}</p>}
+                  </div>
+                </div>;
+              })}
+            </fieldset>
+            <p className="text-xs leading-5 text-[var(--text-faint)]">Public feeds and Hacker News need no API key. One Tinyfish run per automatic edition, up to five browser minutes. If it fails, clearly labelled publisher previews still appear. Paid newsletter content is not unlocked.</p>
+            <button className={button} type="submit" disabled={!!busy || !sourceIds.length}>{busy === "schedule" ? "Saving…" : "Save daily preferences"}</button>
+          </form>
+        </details>
+      </section>}
 
       {data && !data.configured && (
         <section className="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-5">
@@ -123,7 +217,7 @@ export default function DiscoverPage() {
         </section>
       )}
 
-      {data && canStart && (
+      {data && canStart && !data.schedule?.enabled && (
         <form onSubmit={start} className="space-y-4 rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-5">
           <label className="block text-[13px] font-medium">What do you want to learn about?
             <textarea className={field} rows={3} required minLength={3} maxLength={500} value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="e.g. building AI agents, independent software, thoughtful engineering write-ups" />
@@ -147,6 +241,8 @@ export default function DiscoverPage() {
 
       {digest?.status === "failed" && <p role="status" className="text-sm text-[var(--text-muted)]">{digest.error} {digest.attempts >= 2 && "Today's two attempts are used. A fresh edition is available tomorrow (UTC)."}</p>}
 
+      {data?.schedule?.enabled && !digest && <p role="status" className="text-sm text-[var(--text-muted)]">Today's edition hasn't started yet. The scheduler checks every five minutes after 01:00 UTC; you don't need to keep this page open.</p>}
+
       {running && <section role="status" className="rounded-lg border border-[var(--border)] p-6">
         <h2 className="text-lg font-medium">Tinyfish is out reading.</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">Finding blogs and checking articles about {digest?.topics}. This usually takes a few minutes. You can leave this page and come back; your crawl will still be here.</p>
@@ -155,6 +251,7 @@ export default function DiscoverPage() {
 
       {digest?.status === "ready" && (
         <section className="space-y-4">
+          {digest.error && <p role="status" className="text-sm text-[var(--text-muted)]">{digest.error}</p>}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-soft)] pb-3">
             <h2 className="text-sm font-medium">Your {digest.day} edition <span className="text-[var(--text-faint)]">· UTC</span></h2>
             <p className="font-mono text-xs text-[var(--text-muted)]">{remaining.length} left · ~{remaining.reduce((sum, a) => sum + a.minutes, 0)} min</p>
@@ -173,8 +270,13 @@ export default function DiscoverPage() {
                 {article.status !== "unread" && <span>· {article.status}</span>}
               </div>
               <h3 className="text-lg font-medium leading-7"><a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--accent)]">{article.title} ↗</a></h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-body)]">{article.summary}</p>
-              <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]"><span className="font-medium text-[var(--accent)]">Why this read: </span>{article.reason}</p>
+              <div className="mt-2 flex gap-4">
+                <ArticleThumb article={article} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm leading-6 text-[var(--text-body)]">{article.summary}</p>
+                  <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]"><span className="font-medium text-[var(--accent)]">Why this read: </span>{article.reason}</p>
+                </div>
+              </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 {article.itemId ? <Link className={button} href={`/items/${article.itemId}`}>Open reader</Link> : <button className={button} disabled={!!busy} onClick={() => void act(article, "save")}>{busy === article.id ? "Working…" : "Save to library"}</button>}
                 {article.status === "unread" ? <>
