@@ -24,6 +24,7 @@ model User {
   notes     Note[]
   sources   Source[]
   tokens    AgentToken[]
+  digests   DiscoveryDigest[]
 
   @@map("users")
 }
@@ -149,4 +150,41 @@ model AgentToken {
   lastUsedAt DateTime?
 
   @@map("agent_tokens")
+}
+
+model DiscoveryDigest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day          String   // UTC date; one finite edition per user per day
+  topics       String
+  seeds        String   @default("[]")
+  budget       Int      @default(20)
+  status       String   @default("starting") // starting|running|ready|failed
+  attempts     Int      @default(1)
+  runId        String?
+  error        String?
+  startedAt    DateTime @default(now())
+  lastPolledAt DateTime?
+  articles     DiscoveryArticle[]
+
+  @@unique([userId, day])
+  @@map("discovery_digests")
+}
+
+model DiscoveryArticle {
+  id          String @id @default(cuid())
+  digestId    String
+  digest      DiscoveryDigest @relation(fields: [digestId], references: [id], onDelete: Cascade)
+  url         String
+  title       String
+  author      String
+  summary     String
+  reason      String
+  minutes     Int
+  position    Int
+  status      String @default("unread") // unread|read|skipped|saved
+
+  @@unique([digestId, url])
+  @@map("discovery_articles")
 }

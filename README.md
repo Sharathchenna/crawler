@@ -89,6 +89,66 @@ Filter programmatically with `GET /api/items?type=x,repo` and
 `GET /api/search?q=…&type=…`, `hoard search "…" --type …`, or MCP
 `search_items(query, type?)`.
 
+## Discover — a finite alternative to scrolling X
+
+Open **Discover** (`/discover`) and describe what you want to learn. Optionally
+add up to three favourite blog URLs, then choose a 10, 20, or 30 minute budget.
+Tinyfish browses blogs and searches for related authors, opens candidate posts,
+and returns up to **five articles** with summaries and reasons to read them.
+The server enforces the article and estimated reading-time caps, strips common
+tracking parameters, excludes recent previously discovered/saved URLs (up to
+200 of each), and limits each domain to two articles.
+
+Save an article into Hoard's existing Markdown reader, mark it read, or skip it.
+The edition has an end: **one edition per UTC day**, no infinite scrolling or
+rerolling a completed list. Failed crawls get one explicit retry. Reading state
+and crawl IDs live in D1 and are private to your account. Preferences from your
+last edition are prefilled next time.
+
+### Enable discovery
+
+For an existing local installation:
+
+```bash
+npm run db:discovery       # generate Prisma client + apply additive local migration
+# Add TINYFISH_API_KEY="..." to .env for next dev
+npm run dev
+```
+
+New installations get the migration through `npm run setup`. For Workers local
+preview, put the key in `.dev.vars`. Get a key from
+[Tinyfish](https://agent.tinyfish.ai/api-keys). The key is server-only; never
+prefix it with `NEXT_PUBLIC_`.
+
+For production, apply the migration and add the secret before deploying:
+
+```bash
+npx wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
+npx wrangler secret put TINYFISH_API_KEY
+npm run deploy
+```
+
+Discovery uses Tinyfish's paid Agent `run-async` API with a five-minute run
+budget, then polls the stored run ID. There is no automatic daily crawl or cron:
+you explicitly start each day's edition. Leaving the page does not cancel the
+provider run; reopening it retrieves and persists the result. Polling is leased
+in D1 to avoid duplicate checks across tabs. A native D1 batch atomically commits
+the result (the Prisma D1 adapter does not support transactions).
+
+API (existing Access/bearer authentication):
+
+- `GET /api/discover` — configuration status, preferences, today's edition; polls active runs.
+- `POST /api/discover` — `{ "topics": "…", "seeds": [], "budget": 20 }`; starts or returns today's edition.
+- `PATCH /api/discover` — `{ "id": "article-id", "status": "read" }`; status is `unread|read|skipped|saved`.
+- Saving uses existing `POST /api/capture { url }`, then marks the discovery article `saved`.
+
+Verify with `npm run test:discovery` (mocked Tinyfish HTTP, real isolated local
+D1) and `npm run build`. Live discovery requires a configured Tinyfish account.
+
+For replacing X's discovery habit: bookmark `/discover`, pick a daily reading
+window, and leave when the edition is done. It supplies reading material; it
+doesn't block X or reproduce its conversations and social network.
+
 ## Search
 
 Three engines merge per query (each hit carries a `via` tag, additive):

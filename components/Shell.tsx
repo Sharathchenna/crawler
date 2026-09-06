@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { apiJson } from "@/components/api";
 
 const NAV = [
+  { href: "/discover", label: "Discover", icon: "✦" },
   { href: "/library", label: "Library", icon: "▤" },
   { href: "/inbox", label: "Inbox", icon: "◉" },
   { href: "/notes", label: "Notes", icon: "✎" },
