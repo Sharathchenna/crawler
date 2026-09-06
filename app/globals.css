@@ -149,6 +149,11 @@ a, button, input, select, textarea, [role="option"] {
 .reader-body {
   max-width: 72ch;
 }
+/* Anchored TOC jumps shouldn't hide the heading under the progress bar */
+.reader-body h1, .reader-body h2, .reader-body h3,
+.reader-body h4, .reader-body h5, .reader-body h6 {
+  scroll-margin-top: 0.75rem;
+}
 
 /* Reader typography (rendered server-side from Markdown) */
 .reader-body h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin: 0.5rem 0; }

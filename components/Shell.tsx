@@ -24,6 +24,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<PaletteHit[]>([]);
   const [sel, setSel] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,6 +33,8 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
       setQ("");
       setHits([]);
       setSel(0);
+      setSaveMsg("");
+      setSaving(false);
       setTimeout(() => inputRef.current?.focus(), 10);
     }
   }, [open ]);
@@ -50,22 +54,59 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   }, [q]);
 
   const actions = NAV.filter((n) => n.label.toLowerCase().includes(q.toLowerCase()));
-  const total = actions.length + hits.length;
+  // Pasting a URL offers capture right in the palette — no sidebar round-trip.
+  const isUrl = /^https?:\/\/\S+$/i.test(q.trim());
+  const total = actions.length + hits.length + (isUrl ? 1 : 0);
+
+  async function saveUrl() {
+    const url = q.trim();
+    if (saving || !url) return;
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      const res = await fetch("/api/capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await apiJson<{ error?: string; title?: string; reprocessed?: boolean }>(res);
+      if (!res.ok) {
+        setSaveMsg(data.error ?? "Couldn't save that.");
+      } else {
+        setSaveMsg(`Saved: ${data.title ?? url}`);
+        window.dispatchEvent(new Event("hoard:items-changed"));
+        setTimeout(onClose, 900);
+      }
+    } catch {
+      setSaveMsg("Network hiccup — try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const go = useCallback(
     (index: number) => {
-      if (index < actions.length) {
-        router.push(actions[index].href);
+      let i = index;
+      if (isUrl) {
+        if (i === 0) {
+          void saveUrl();
+          return;
+        }
+        i -= 1;
+      }
+      if (i < actions.length) {
+        router.push(actions[i].href);
         onClose();
       } else {
-        const h = hits[index - actions.length];
+        const h = hits[i - actions.length];
         if (h) {
           router.push(h.kind === "note" ? `/notes/${h.id}` : `/items/${h.id}`);
           onClose();
         }
       }
     },
-    [actions, hits, router, onClose]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [actions, hits, isUrl, router, onClose]
   );
 
   if (!open) return null;
@@ -109,8 +150,29 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
             className="w-full bg-transparent py-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
         </div>
+        {saveMsg && (
+          <p role="status" className="border-b border-[var(--border-soft)] px-3 py-2 font-mono text-[11px] text-[var(--text-muted)]">
+            {saveMsg}
+          </p>
+        )}
         <ul role="listbox" aria-label="Results" className="max-h-72 overflow-y-auto p-1.5">
-          {actions.map((a, i) => (
+          {isUrl && (
+            <li
+              role="option"
+              aria-selected={sel === 0}
+              onClick={() => go(0)}
+              onMouseEnter={() => setSel(0)}
+              className={`flex cursor-pointer items-center gap-2 rounded-[8px] px-2.5 py-2 text-sm ${
+                sel === 0 ? "bg-[var(--accent)] text-white" : "text-[var(--text-body)]"
+              }`}
+            >
+              <span aria-hidden className="font-mono text-xs opacity-70">＋</span>
+              {saving ? "Saving…" : `Save ${q.trim().slice(0, 60)}`}
+            </li>
+          )}
+          {actions.map((a, ai) => {
+            const i = ai + (isUrl ? 1 : 0);
+            return (
             <li
               key={a.href}
               role="option"
@@ -124,9 +186,10 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
               <span aria-hidden className="font-mono text-xs opacity-70">{a.icon}</span>
               Go to {a.label}
             </li>
-          ))}
+            );
+          })}
           {hits.map((h, j) => {
-            const i = actions.length + j;
+            const i = actions.length + (isUrl ? 1 : 0) + j;
             return (
               <li
                 key={h.id}

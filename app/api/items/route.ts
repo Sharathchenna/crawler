@@ -14,11 +14,13 @@ export async function GET(req: Request) {
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean)
     .slice(0, 8);
+  const tag = (searchParams.get("tag") ?? "").trim().toLowerCase().slice(0, 40);
   const items = await getDb().item.findMany({
     where: {
       userId: user.id,
       ...(status && VALID_STATUS.has(status) ? { status } : {}),
       ...(types.length ? { type: { in: types } } : {}),
+      ...(tag ? { tags: { some: { tag: { userId: user.id, name: tag } } } } : {}),
     },
     include: { tags: { include: { tag: true } } },
     orderBy: { createdAt: "desc" },

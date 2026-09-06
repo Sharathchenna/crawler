@@ -1,0 +1,388 @@
+{
+  "bgm": null,
+  "bgm_pending": false,
+  "voices": [
+    {
+      "frame": 1,
+      "path": "assets/voice/01.wav",
+      "duration_s": 4.971,
+      "words": []
+    },
+    {
+      "frame": 2,
+      "path": "assets/voice/02.wav",
+      "duration_s": 4.011,
+      "words": [
+        {
+          "id": "w0",
+          "text": "Introducing",
+          "start": 0.04,
+          "end": 0.91
+        },
+        {
+          "id": "w1",
+          "text": "Hyper",
+          "start": 0.91,
+          "end": 1.31
+        },
+        {
+          "id": "w2",
+          "text": "Frames,",
+          "start": 1.31,
+          "end": 1.88
+        },
+        {
+          "id": "w3",
+          "text": "right",
+          "start": 1.9,
+          "end": 2.41
+        },
+        {
+          "id": "w4",
+          "text": "HTML",
+          "start": 2.41,
+          "end": 2.83
+        },
+        {
+          "id": "w5",
+          "text": "render",
+          "start": 2.83,
+          "end": 3.46
+        },
+        {
+          "id": "w6",
+          "text": "video.",
+          "start": 3.46,
+          "end": 4.01
+        }
+      ]
+    },
+    {
+      "frame": 3,
+      "path": "assets/voice/03.wav",
+      "duration_s": 3.584,
+      "words": [
+        {
+          "id": "w0",
+          "text": "Code",
+          "start": 0.03,
+          "end": 0.26
+        },
+        {
+          "id": "w1",
+          "text": "on",
+          "start": 0.29,
+          "end": 0.42
+        },
+        {
+          "id": "w2",
+          "text": "the",
+          "start": 0.42,
+          "end": 0.63
+        },
+        {
+          "id": "w3",
+          "text": "left,",
+          "start": 0.63,
+          "end": 1.05
+        },
+        {
+          "id": "w4",
+          "text": "video",
+          "start": 1.05,
+          "end": 1.4
+        },
+        {
+          "id": "w5",
+          "text": "on",
+          "start": 1.4,
+          "end": 1.54
+        },
+        {
+          "id": "w6",
+          "text": "the",
+          "start": 1.54,
+          "end": 1.75
+        },
+        {
+          "id": "w7",
+          "text": "right,",
+          "start": 1.75,
+          "end": 2.28
+        },
+        {
+          "id": "w8",
+          "text": "one",
+          "start": 2.29,
+          "end": 2.51
+        },
+        {
+          "id": "w9",
+          "text": "source",
+          "start": 2.51,
+          "end": 2.92
+        },
+        {
+          "id": "w10",
+          "text": "of",
+          "start": 3.02,
+          "end": 3.12
+        },
+        {
+          "id": "w11",
+          "text": "truth.",
+          "start": 3.13,
+          "end": 3.58
+        }
+      ]
+    },
+    {
+      "frame": 4,
+      "path": "assets/voice/04.wav",
+      "duration_s": 5.227,
+      "words": []
+    },
+    {
+      "frame": 5,
+      "path": "assets/voice/05.wav",
+      "duration_s": 4.651,
+      "words": [
+        {
+          "id": "w0",
+          "text": "Render",
+          "start": 0.05,
+          "end": 0.45
+        },
+        {
+          "id": "w1",
+          "text": "it",
+          "start": 0.57,
+          "end": 0.69
+        },
+        {
+          "id": "w2",
+          "text": "twice",
+          "start": 0.69,
+          "end": 1.01
+        },
+        {
+          "id": "w3",
+          "text": "frame-identical,",
+          "start": 1.21,
+          "end": 2.56
+        },
+        {
+          "id": "w4",
+          "text": "deterministic",
+          "start": 2.56,
+          "end": 3.29
+        },
+        {
+          "id": "w5",
+          "text": "built",
+          "start": 3.41,
+          "end": 3.84
+        },
+        {
+          "id": "w6",
+          "text": "for",
+          "start": 3.84,
+          "end": 4.12
+        },
+        {
+          "id": "w7",
+          "text": "CI.",
+          "start": 4.12,
+          "end": 4.4
+        }
+      ]
+    },
+    {
+      "frame": 6,
+      "path": "assets/voice/06.wav",
+      "duration_s": 6.08,
+      "words": [
+        {
+          "id": "w0",
+          "text": "Kly",
+          "start": 0.05,
+          "end": 0.34
+        },
+        {
+          "id": "w1",
+          "text": "Catalog",
+          "start": 0.34,
+          "end": 1.06
+        },
+        {
+          "id": "w2",
+          "text": "Studio",
+          "start": 1.19,
+          "end": 1.78
+        },
+        {
+          "id": "w3",
+          "text": "Cloud",
+          "start": 1.95,
+          "end": 2.36
+        },
+        {
+          "id": "w4",
+          "text": "Rendering,",
+          "start": 2.36,
+          "end": 3.38
+        },
+        {
+          "id": "w5",
+          "text": "loved",
+          "start": 3.38,
+          "end": 3.58
+        },
+        {
+          "id": "w6",
+          "text": "by",
+          "start": 3.74,
+          "end": 3.88
+        },
+        {
+          "id": "w7",
+          "text": "44,000",
+          "start": 3.88,
+          "end": 5.12
+        },
+        {
+          "id": "w8",
+          "text": "stargazers.",
+          "start": 5.12,
+          "end": 6.04
+        }
+      ]
+    },
+    {
+      "frame": 7,
+      "path": "assets/voice/07.wav",
+      "duration_s": 3.947,
+      "words": [
+        {
+          "id": "w0",
+          "text": "one",
+          "start": 0.13,
+          "end": 0.3
+        },
+        {
+          "id": "w1",
+          "text": "command",
+          "start": 0.3,
+          "end": 1.01
+        },
+        {
+          "id": "w2",
+          "text": "NPX",
+          "start": 1.01,
+          "end": 1.31
+        },
+        {
+          "id": "w3",
+          "text": "hyperframes",
+          "start": 1.31,
+          "end": 2.43
+        },
+        {
+          "id": "w4",
+          "text": "in",
+          "start": 2.43,
+          "end": 2.55
+        },
+        {
+          "id": "w5",
+          "text": "it,",
+          "start": 2.88,
+          "end": 2.98
+        },
+        {
+          "id": "w6",
+          "text": "and",
+          "start": 3.01,
+          "end": 3.14
+        },
+        {
+          "id": "w7",
+          "text": "you're",
+          "start": 3.14,
+          "end": 3.45
+        },
+        {
+          "id": "w8",
+          "text": "rolling.",
+          "start": 3.45,
+          "end": 3.86
+        }
+      ]
+    }
+  ],
+  "sfx": [
+    {
+      "frame": 1,
+      "file": "assets/sfx/impact-bass-1.mp3",
+      "offset_s": 0,
+      "duration_s": 2.12,
+      "volume": 0.35
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/pop.mp3",
+      "offset_s": 0,
+      "duration_s": 0.72,
+      "volume": 0.35
+    },
+    {
+      "frame": 3,
+      "file": "assets/sfx/click-soft.mp3",
+      "offset_s": 0,
+      "duration_s": 0.37,
+      "volume": 0.35
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/key-press.mp3",
+      "offset_s": 0,
+      "duration_s": 0.4,
+      "volume": 0.35
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/chime.mp3",
+      "offset_s": 0,
+      "duration_s": 2.5,
+      "volume": 0.35
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/click-soft.mp3",
+      "offset_s": 0,
+      "duration_s": 0.37,
+      "volume": 0.35
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/riser.mp3",
+      "offset_s": 0,
+      "duration_s": 10.03,
+      "volume": 0.35
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/impact-bass-1.mp3",
+      "offset_s": 0,
+      "duration_s": 2.12,
+      "volume": 0.35
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/pop.mp3",
+      "offset_s": 0,
+      "duration_s": 0.72,
+      "volume": 0.35
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import hljs from "highlight.js";
 import type { BundledLanguage } from "shiki";
 import type { HighlighterCore } from "shiki/core";
 import { getHighlighter, SHIKI_THEMES } from "./shiki";
+import { slugifyHeading } from "./slug";
 
 // Languages the reader highlights (canonical Shiki ids). Common fence
 // aliases map to these; anything else falls back to plaintext —
@@ -212,6 +213,24 @@ function codeChrome() {
 
 let processorPromise: Promise<ReturnType<typeof buildProcessor>> | null = null;
 
+/**
+ * Rehype plugin: deterministic ids on h1–h6 (`slug`, `slug-1`, …) so the
+ * client TOC (same algorithm in lib/slug.ts) links to the right anchors.
+ */
+function headingIds() {
+  return (tree: any) => {
+    const seen = new Map<string, number>();
+    visit(tree, "element", (node: any) => {
+      if (!/^h[1-6]$/.test(node.tagName)) return;
+      const base = slugifyHeading(codeText(node));
+      const n = seen.get(base) ?? 0;
+      seen.set(base, n + 1);
+      node.properties = node.properties ?? {};
+      node.properties.id = n === 0 ? base : `${base}-${n}`;
+    });
+  };
+}
+
 // HighlighterCore's generics don't satisfy HighlighterGeneric<any, any>
 // under strict variance (a types-only artifact — the runtime shape is
 // proven working on workerd), so the single handoff is asserted.
@@ -221,6 +240,7 @@ function buildProcessor(highlighter: HighlighterCore) {
     .use(remarkGfm)
     .use(remarkRehype)
     .use(codeChrome)
+    .use(headingIds)
     .use(
       rehypeShikiFromHighlighter,
       highlighter as Parameters<typeof rehypeShikiFromHighlighter>[0],
@@ -245,6 +265,19 @@ async function processor() {
 }
 
 /**
+ * Route remote images through /api/img (edge-cached proxy): fixes
+ * hotlink-protected images, keeps referrers private, and lazy-loads.
+ * Stored Markdown is untouched — only rendered reader HTML is rewritten.
+ */
+function proxyImages(html: string): string {
+  return html.replace(/<img\b([^>]*?)\bsrc="(https?:[^"]+)"([^>]*)>/gi, (m, pre, src, post) => {
+    if (src.startsWith("/api/img")) return m;
+    const tag = `<img${pre}src="/api/img?url=${encodeURIComponent(src)}"${post}>`;
+    return /loading\s*=/i.test(tag) ? tag : tag.replace("<img", '<img loading="lazy"');
+  });
+}
+
+/**
  * Render stored Markdown to reader HTML (server-side): full GFM support
  * (tables, task lists, strikethrough, autolinks) with Shiki (VS Code-grade)
  * syntax highlighting. Raw HTML in the source is escaped, never executed.
@@ -254,7 +287,7 @@ async function processor() {
 export async function renderMarkdownHtml(md: string): Promise<string> {
   try {
     const file = await (await processor()).process(md || "");
-    return String(file);
+    return proxyImages(String(file));
   } catch (e) {
     console.error("[markdown-html] render failed:", e);
     const err = (e instanceof Error ? e.message : String(e)).replace(/-->/g, "--&gt;");

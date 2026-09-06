@@ -1,0 +1,222 @@
+<template id="captions-template" data-composition-id="captions" data-width="1920" data-height="1080">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+
+<style data-brand-tokens>
+      @font-face { font-family: 'paperMono'; src: url('assets/fonts/paperMono-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: block; }
+      :root {
+      --ink: #9FA2A1;
+      --cream: #000000;
+      --tile: #08291F;
+      --tile-strong: #17795B;
+      --coral: #3CE6AC;
+      --navy: #E7EAE9;
+      --navy-soft: #E0E4E3;
+      --navy-elev: #DADFDD;
+      --cap-ink: #9FA2A1;
+      --cap-canvas: #000000;
+      --cap-accent: #3CE6AC;
+      --cap-accent-2: #17795B;
+      --font-display: "paperMono", system-ui, serif;
+      --font-body: "paperMono", system-ui, sans-serif;
+      --cap-band-top: 900px;
+      --cap-band-height: 180px;
+      }
+    </style>
+
+<style>
+  #captions-root {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .caption-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+  }
+  /* the keep-out band, from captionBand(H) — frame content stays above it */
+  .caption-stage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--cap-band-top, 900px);
+    height: var(--cap-band-height, 180px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .caption-group {
+    /* every group is absolutely stacked over the SAME band — exactly one shown at a
+       time via opacity. Must be absolute: in-flow groups would lay out side-by-side. */
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+
+  /* THE lifted cream card — warm cream fill, 1px hairline ink border, one soft warm
+     shadow (code-editorial's only elevation language), 12px radius, no tilt */
+  .caption-pill {
+    max-width: 78%;
+    padding: 22px 44px 26px;
+    background: var(--cap-canvas, #faf9f5);
+    border: 1px solid color-mix(in srgb, var(--cap-ink, #141413) 12%, transparent);
+    border-radius: 12px;
+    box-shadow:
+      0 1px 3px color-mix(in srgb, var(--cap-ink, #141413) 8%, transparent),
+      0 4px 16px color-mix(in srgb, var(--cap-ink, #141413) 4%, transparent);
+  }
+  .caption-line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.12em 0.3em;
+    font-family: "paperMono", Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(40px, 4.4vw, 56px);
+    line-height: 1.24;
+    letter-spacing: -0.02em;
+  }
+
+  /* upcoming — faint warm ink, no underline */
+  .caption-word {
+    display: inline-block;
+    padding: 0 0.02em 0.06em;
+    color: color-mix(in srgb, var(--cap-ink, #141413) 40%, var(--cap-canvas, #faf9f5));
+    border-bottom: 3px solid transparent;
+  }
+  /* current word — full ink under the coral voltage underline (the brand's signature
+     inline-link gesture; border-bottom = underline without layout shift) */
+  .caption-word.is-active {
+    color: var(--cap-ink, #141413);
+    border-bottom: 3px solid var(--cap-accent, #cc785c);
+  }
+  /* already spoken — solid warm ink, underline cleared */
+  .caption-word.is-spoken {
+    color: var(--cap-ink, #141413);
+    border-bottom: 3px solid transparent;
+  }
+
+  /* optional per-word accents (dormant until a word-classer tags them) */
+  /* brand / key term — the expressive EB Garamond italic */
+  .caption-word.cap-brand {
+    font-style: italic;
+    color: var(--cap-ink, #141413);
+  }
+  .caption-word.cap-brand.is-active {
+    border-bottom: 3px solid var(--cap-accent, #cc785c);
+  }
+  /* numerals / data — slightly recessed warm ink */
+  .caption-word.cap-num {
+    color: color-mix(in srgb, var(--cap-ink, #141413) 72%, var(--cap-canvas, #faf9f5));
+  }
+  /* emphasis — a persistent coral voltage underline */
+  .caption-word.cap-cta {
+    border-bottom: 3px solid var(--cap-accent-2, #b5654a);
+    color: var(--cap-ink, #141413);
+  }
+
+  @media (max-aspect-ratio: 9/16) {
+    .caption-pill {
+      max-width: 92%;
+    }
+    .caption-line {
+      font-size: clamp(34px, 5.4vw, 46px);
+    }
+  }
+</style>
+
+<div
+  id="captions-root"
+  data-composition-id="captions"
+  data-timeline-locked
+  data-start="0"
+  data-duration="32.471"
+  data-fps="30"
+  data-width="1920"
+  data-height="1080"
+>
+  <div class="caption-layer" aria-hidden="true">
+    <div id="caption-stage" class="caption-stage"></div>
+  </div>
+</div>
+
+<script>
+  // captions.mjs injects the engine's scene-aware groups + real duration here.
+  var GROUPS = [{"id":"caption-group-0","frame":2,"start":5.011,"end":6.871,"text":"Introducing Hyper Frames,","words":[{"id":"caption-word-0-0","text":"Introducing","start":5.011,"end":5.881},{"id":"caption-word-0-1","text":"Hyper","start":5.881,"end":6.281},{"id":"caption-word-0-2","text":"Frames,","start":6.281,"end":6.851}]},{"id":"caption-group-1","frame":2,"start":6.871,"end":8.431,"text":"right HTML render","words":[{"id":"caption-word-1-0","text":"right","start":6.871,"end":7.381},{"id":"caption-word-1-1","text":"HTML","start":7.381,"end":7.801},{"id":"caption-word-1-2","text":"render","start":7.801,"end":8.431}]},{"id":"caption-group-2","frame":2,"start":8.431,"end":9.012,"text":"video.","words":[{"id":"caption-word-2-0","text":"video.","start":8.431,"end":8.981}]},{"id":"caption-group-3","frame":3,"start":9.012,"end":9.402,"text":"Code on","words":[{"id":"caption-word-3-0","text":"Code","start":9.012,"end":9.242},{"id":"caption-word-3-1","text":"on","start":9.272,"end":9.402}]},{"id":"caption-group-4","frame":3,"start":9.402,"end":10.032,"text":"the left,","words":[{"id":"caption-word-4-0","text":"the","start":9.402,"end":9.612},{"id":"caption-word-4-1","text":"left,","start":9.612,"end":10.032}]},{"id":"caption-group-5","frame":3,"start":10.032,"end":10.522,"text":"video on","words":[{"id":"caption-word-5-0","text":"video","start":10.032,"end":10.382},{"id":"caption-word-5-1","text":"on","start":10.382,"end":10.522}]},{"id":"caption-group-6","frame":3,"start":10.522,"end":11.272,"text":"the right,","words":[{"id":"caption-word-6-0","text":"the","start":10.522,"end":10.732},{"id":"caption-word-6-1","text":"right,","start":10.732,"end":11.262}]},{"id":"caption-group-7","frame":3,"start":11.272,"end":12.002,"text":"one source","words":[{"id":"caption-word-7-0","text":"one","start":11.272,"end":11.492},{"id":"caption-word-7-1","text":"source","start":11.492,"end":11.902}]},{"id":"caption-group-8","frame":3,"start":12.002,"end":12.682,"text":"of truth.","words":[{"id":"caption-word-8-0","text":"of","start":12.002,"end":12.102},{"id":"caption-word-8-1","text":"truth.","start":12.112,"end":12.562}]},{"id":"caption-group-9","frame":5,"start":17.843,"end":18.923,"text":"Render it twice","words":[{"id":"caption-word-9-0","text":"Render","start":17.843,"end":18.243},{"id":"caption-word-9-1","text":"it","start":18.363,"end":18.483},{"id":"caption-word-9-2","text":"twice","start":18.483,"end":18.803}]},{"id":"caption-group-10","frame":5,"start":19.003,"end":20.353,"text":"frame-identical,","words":[{"id":"caption-word-10-0","text":"frame-identical,","start":19.003,"end":20.353}]},{"id":"caption-group-11","frame":5,"start":20.353,"end":22.313,"text":"deterministic built for CI.","words":[{"id":"caption-word-11-0","text":"deterministic","start":20.353,"end":21.083},{"id":"caption-word-11-1","text":"built","start":21.203,"end":21.633},{"id":"caption-word-11-2","text":"for","start":21.633,"end":21.913},{"id":"caption-word-11-3","text":"CI.","start":21.913,"end":22.193}]},{"id":"caption-group-12","frame":6,"start":22.494,"end":24.804,"text":"Kly Catalog Studio Cloud","words":[{"id":"caption-word-12-0","text":"Kly","start":22.494,"end":22.784},{"id":"caption-word-12-1","text":"Catalog","start":22.784,"end":23.504},{"id":"caption-word-12-2","text":"Studio","start":23.634,"end":24.224},{"id":"caption-word-12-3","text":"Cloud","start":24.394,"end":24.804}]},{"id":"caption-group-13","frame":6,"start":24.804,"end":25.824,"text":"Rendering,","words":[{"id":"caption-word-13-0","text":"Rendering,","start":24.804,"end":25.824}]},{"id":"caption-group-14","frame":6,"start":25.824,"end":27.564,"text":"loved by 44,000","words":[{"id":"caption-word-14-0","text":"loved","start":25.824,"end":26.024},{"id":"caption-word-14-1","text":"by","start":26.184,"end":26.324},{"id":"caption-word-14-2","text":"44,000","start":26.324,"end":27.564}]},{"id":"caption-group-15","frame":6,"start":27.564,"end":28.604,"text":"stargazers.","words":[{"id":"caption-word-15-0","text":"stargazers.","start":27.564,"end":28.484}]},{"id":"caption-group-16","frame":7,"start":28.654,"end":29.834,"text":"one command NPX","words":[{"id":"caption-word-16-0","text":"one","start":28.654,"end":28.824},{"id":"caption-word-16-1","text":"command","start":28.824,"end":29.534},{"id":"caption-word-16-2","text":"NPX","start":29.534,"end":29.834}]},{"id":"caption-group-17","frame":7,"start":29.834,"end":31.194,"text":"hyperframes in","words":[{"id":"caption-word-17-0","text":"hyperframes","start":29.834,"end":30.954},{"id":"caption-word-17-1","text":"in","start":30.954,"end":31.074}]},{"id":"caption-group-18","frame":7,"start":31.404,"end":31.534,"text":"it,","words":[{"id":"caption-word-18-0","text":"it,","start":31.404,"end":31.504}]},{"id":"caption-group-19","frame":7,"start":31.534,"end":32.504,"text":"and you're rolling.","words":[{"id":"caption-word-19-0","text":"and","start":31.534,"end":31.664},{"id":"caption-word-19-1","text":"you're","start":31.664,"end":31.974},{"id":"caption-word-19-2","text":"rolling.","start":31.974,"end":32.384}]}];
+  var DURATION = 32.471;
+
+  (function () {
+    var stage = document.getElementById("caption-stage");
+
+    // build DOM: one .caption-group per group, .caption-word per word
+    GROUPS.forEach(function (group, g) {
+      var groupEl = document.createElement("div");
+      groupEl.className = "caption-group";
+      groupEl.id = "caption-group-" + g;
+      var pill = document.createElement("div");
+      pill.className = "caption-pill";
+      var line = document.createElement("div");
+      line.className = "caption-line";
+      (group.words || []).forEach(function (w, i) {
+        var span = document.createElement("span");
+        span.className = "caption-word";
+        span.id = "caption-word-" + g + "-" + i;
+        span.textContent = String(w.text);
+        line.appendChild(span);
+      });
+      pill.appendChild(line);
+      groupEl.appendChild(pill);
+      stage.appendChild(groupEl);
+    });
+
+    window.__timelines = window.__timelines || {};
+    var tl = gsap.timeline({ paused: true });
+
+    GROUPS.forEach(function (group, g) {
+      var groupEl = document.getElementById("caption-group-" + g);
+      var words = group.words || [];
+      var next = GROUPS[g + 1];
+      var isLast = g === GROUPS.length - 1;
+      var start = Math.max(0, Number(group.start));
+      var end = isLast ? DURATION : Math.min(Number(next.start), Number(group.end) + 0.3);
+      if (end <= start) end = start + 0.01;
+
+      // group on/off — exactly one group visible at a time
+      tl.set(groupEl, { opacity: 1 }, start);
+      tl.set(groupEl, { opacity: 0 }, end);
+
+      // 3-state karaoke via className SETS — seek-safe (gsap.set applies on the
+      // engine's frame-by-frame seek; .call callbacks would NOT fire).
+      words.forEach(function (w, i) {
+        var el = document.getElementById("caption-word-" + g + "-" + i);
+        var at = Math.max(start, Number(w.start));
+        tl.set(el, { className: "caption-word" }, start); // upcoming (also resets on reverse-seek)
+        tl.set(el, { className: "caption-word is-active" }, at); // current
+        tl.fromTo(el, { scale: 0.98 }, { scale: 1, duration: 0.16, ease: "power1.out" }, at);
+        if (i + 1 < words.length) {
+          var nextAt = Math.max(start, Number(words[i + 1].start));
+          tl.set(el, { className: "caption-word is-spoken" }, nextAt); // demote when next activates
+        }
+      });
+      if (words.length) {
+        var lastEl = document.getElementById("caption-word-" + g + "-" + (words.length - 1));
+        var lastSpoken = Math.min(end, Number(words[words.length - 1].end) + 0.1);
+        tl.set(lastEl, { className: "caption-word is-spoken" }, lastSpoken);
+      }
+    });
+
+    // full-span anchor so the sub-comp timeline spans the whole video
+    tl.to({}, { duration: DURATION }, 0);
+    window.__timelines["captions"] = tl;
+  })();
+</script>
+
+<style>
+  .caption-line { line-height: 1.1 !important; }
+</style>
+</template>

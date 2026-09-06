@@ -1,0 +1,51 @@
+{
+  "lines": [
+    {
+      "id": "01",
+      "sfx": [
+        "impact-bass-1"
+      ]
+    },
+    {
+      "id": "02",
+      "sfx": [
+        "pop"
+      ]
+    },
+    {
+      "id": "03",
+      "sfx": [
+        "click-soft"
+      ]
+    },
+    {
+      "id": "04",
+      "sfx": [
+        "key-press",
+        "chime"
+      ]
+    },
+    {
+      "id": "05",
+      "sfx": [
+        "click-soft"
+      ]
+    },
+    {
+      "id": "06",
+      "sfx": [
+        "riser",
+        "impact-bass-1"
+      ]
+    },
+    {
+      "id": "07",
+      "sfx": [
+        "pop"
+      ]
+    }
+  ],
+  "bgm": {
+    "mode": "none"
+  }
+}

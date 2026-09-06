@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "preferences": {
+    "destination": {
+      "value": "youtube",
+      "confirmed_in": [
+        "hyperframes-promo"
+      ],
+      "updated_at": "2026-09-06T16:46:15.396Z"
+    },
+    "aspect": {
+      "value": "1920x1080",
+      "confirmed_in": [
+        "hyperframes-promo"
+      ],
+      "updated_at": "2026-09-06T16:46:15.445Z"
+    },
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "hyperframes-promo"
+      ],
+      "updated_at": "2026-09-06T16:46:15.494Z"
+    },
+    "storyboard": {
+      "value": "yes",
+      "confirmed_in": [
+        "hyperframes-promo"
+      ],
+      "updated_at": "2026-09-06T16:46:15.541Z"
+    },
+    "style_preset.product-launch-video": {
+      "value": "code-editorial",
+      "confirmed_in": [
+        "hyperframes-promo"
+      ],
+      "updated_at": "2026-09-06T16:50:50.397Z"
+    }
+  },
+  "sightings": {}
+}

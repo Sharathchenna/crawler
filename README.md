@@ -266,7 +266,8 @@ Saving a URL runs an automatic pipeline — the capture bar shows
    (title, source, author, published, created, description, tags): Defuddle
    main-content extraction → `createMarkdownContent` Markdown conversion
    (headings, lists, links, code blocks, tables, blockquotes, images with
-   original URLs — assets are never downloaded) → compiled note.
+   original URLs — stored as-is, rendered through the edge-cached `/api/img`
+   proxy) → compiled note.
 3. **Render** server-side (`lib/markdown-html.ts`): unified + remark-gfm for
    full Markdown, Shiki (VS Code-grade, JS regex engine — the only engine
    workerd allows) for code highlighting with a card + language label per
@@ -322,7 +323,9 @@ it tells you to run `login`. Network error → it prints the URL it tried and th
 - No password routes. Sign-in happens at Cloudflare Access; first sight auto-provisions
   the user. Machines use bearer tokens from Settings (+ service-token headers past Access).
 - `POST /api/capture` `{ url }` or `{ text, title }` — never 500s on a bad page (saves a bookmark instead). Accepts session **or** bearer.
-- `GET/POST /api/items`, `GET/PATCH/DELETE /api/items/[id]` (status: inbox|saved|archived|done)
+- `GET/POST /api/items` (`?status=&type=&tag=`), `GET/PATCH/DELETE /api/items/[id]` (status: inbox|saved|archived|done)
+- `GET/POST /api/items/[id]/highlights`, `DELETE /api/items/[id]/highlights/[hid]` (saved text selections)
+- `GET /api/img?url=` (edge-cached image proxy for reader content; auth required)
 - `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` (every PATCH → new `NoteRevision`)
 - `GET /api/search?q=`, `GET/POST /api/tokens`, `GET /api/tags`
 

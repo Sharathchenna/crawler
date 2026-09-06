@@ -16,37 +16,59 @@ type Item = {
   tags: string[];
 };
 
-// Browsable lists show active items only: done/archived stay searchable
-// but leave Library, Repos, Tweets and Articles once marked.
-
 const HIDDEN_WHEN_UNFILTERED = new Set(["archived", "done"]);
+
+/** Publisher favicon with zero backend cost; falls back to the type icon
+ * when the host has none (privacy-preserving: browser→site, same as a
+ * click, no third-party icon service in the middle). */
+function RowThumb({ item }: { item: Item }) {
+  const [failed, setFailed] = useState(false);
+  const host = domainOf(item.sourceUrl);
+  if (!host || failed) return <TypeIcon type={item.type} />;
+  return (
+    <img
+      src={`https://${host}/favicon.ico`}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      className="h-7 w-7 shrink-0 rounded-[6px] border border-[var(--border-soft)] object-contain p-1"
+    />
+  );
+}
 
 export function ItemList({
   statusFilter,
   typeFilter,
+  tagFilter,
   emptyHint,
 }: {
   statusFilter?: string;
   typeFilter?: string;
+  tagFilter?: string;
   emptyHint: string;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   async function load() {
     setLoading(true);
+    setError("");
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("type", typeFilter);
+      if (tagFilter) params.set("tag", tagFilter);
       const qs = params.size ? `?${params}` : "";
       // no-store: a cached list is exactly how a just-saved item goes missing.
       const res = await fetch(`/api/items${qs}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: unknown = await res.json();
       const list: Item[] = Array.isArray(data) ? data : [];
       setItems(statusFilter ? list : list.filter((i) => !HIDDEN_WHEN_UNFILTERED.has(i.status)));
     } catch {
-      setItems([]);
+      setError("Couldn't load items — check you're online, then retry.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +93,7 @@ export function ItemList({
       document.removeEventListener("visibilitychange", onVis);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, typeFilter]);
+  }, [statusFilter, typeFilter, tagFilter]);
 
   async function setStatus(id: string, status: string) {
     const res = await fetch(`/api/items/${id}`, {
@@ -99,6 +121,20 @@ export function ItemList({
   }
 
   if (loading) return <p className="font-mono text-[12px] text-[var(--text-faint)]">Loading…</p>;
+  // Errors are shown, never swallowed into an empty list.
+  if (error && !items.length)
+    return (
+      <div className="rounded-[10px] border border-[var(--border)] p-10 text-center">
+        <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--text)]">Couldn't load items.</p>
+        <p className="mt-1 text-[13px] text-[var(--text-muted)]">{error}</p>
+        <button
+          onClick={load}
+          className="mt-4 rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-[13px] hover:bg-[var(--bg-hover)]"
+        >
+          Retry
+        </button>
+      </div>
+    );
   if (!items.length)
     return (
       <div className="hero-glow rounded-[10px] border border-dashed border-[var(--border)] p-10 text-center">
@@ -117,7 +153,7 @@ export function ItemList({
             idx !== items.length - 1 ? "border-b border-[var(--border-soft)]" : ""
           }`}
         >
-          <TypeIcon type={it.type} />
+          <RowThumb item={it} />
           <div className="min-w-0 flex-1">
             <Link
               href={`/items/${it.id}`}
@@ -127,7 +163,23 @@ export function ItemList({
             </Link>
             <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--text-faint)]">
               {domainOf(it.sourceUrl)}{domainOf(it.sourceUrl) && " · "}{timeAgo(it.createdAt)} · {it.status}
-              {it.tags.length ? ` · ${it.tags.join(", ")}` : ""}
+              {it.tags.length ? (
+                <>
+                  {" · "}
+                  {it.tags.map((t, ti) => (
+                    <span key={t}>
+                      {ti > 0 && ", "}
+                      <Link
+                        href={`/library?tag=${encodeURIComponent(t)}`}
+                        className="hover:text-[var(--accent)] hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {t}
+                      </Link>
+                    </span>
+                  ))}
+                </>
+              ) : ""}
             </p>
             {it.excerpt && (
               <p className="mt-0.5 truncate text-[13px] text-[var(--text-muted)]">{it.excerpt}</p>
