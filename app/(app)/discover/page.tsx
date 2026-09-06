@@ -32,9 +32,9 @@ function ArticleThumb({ article }: { article: Article }) {
   }, [article.id, article.imageUrl, article.url]);
   if (!src || failed) {
     const host = domainOf(article.url);
-    return <div aria-hidden="true" className="flex h-20 w-28 shrink-0 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg)] font-mono text-xl text-[var(--text-faint)]">{(host[0] ?? "?").toUpperCase()}</div>;
+    return <div aria-hidden="true" className="flex h-28 w-40 shrink-0 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg)] font-mono text-xl text-[var(--text-faint)]">{(host[0] ?? "?").toUpperCase()}</div>;
   }
-  return <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-20 w-28 shrink-0 rounded-md border border-[var(--border-soft)] object-cover" />;
+  return <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-28 w-40 shrink-0 rounded-md border border-[var(--border-soft)] object-cover" />;
 }
 const button = "rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-[13px] hover:bg-[var(--bg-hover)] disabled:opacity-50";
 const field = "mt-1.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none";

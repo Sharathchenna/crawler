@@ -16,6 +16,11 @@ type Item = {
   tags: string[];
 };
 
+// Browsable lists show active items only: done/archived stay searchable
+// but leave Library, Repos, Tweets and Articles once marked.
+
+const HIDDEN_WHEN_UNFILTERED = new Set(["archived", "done"]);
+
 export function ItemList({
   statusFilter,
   typeFilter,
@@ -38,7 +43,7 @@ export function ItemList({
       const res = await fetch(`/api/items${qs}`);
       const data: unknown = await res.json();
       const list: Item[] = Array.isArray(data) ? data : [];
-      setItems(statusFilter ? list : list.filter((i) => i.status !== "archived"));
+      setItems(statusFilter ? list : list.filter((i) => !HIDDEN_WHEN_UNFILTERED.has(i.status)));
     } catch {
       setItems([]);
     } finally {
@@ -57,16 +62,27 @@ export function ItemList({
   }, [statusFilter, typeFilter]);
 
   async function setStatus(id: string, status: string) {
-    await fetch(`/api/items/${id}`, {
+    const res = await fetch(`/api/items/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (res.ok) {
+      // Optimistic: drop rows that no longer match this list, then reconcile.
+      setItems((prev) =>
+        prev.filter((i) => {
+          if (i.id !== id) return true;
+          if (statusFilter) return status === statusFilter;
+          return !HIDDEN_WHEN_UNFILTERED.has(status);
+        })
+      );
+    }
     load();
   }
 
   async function remove(id: string) {
-    await fetch(`/api/items/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
+    if (res.ok) setItems((prev) => prev.filter((i) => i.id !== id));
     load();
   }
 
