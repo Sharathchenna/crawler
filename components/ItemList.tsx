@@ -40,7 +40,8 @@ export function ItemList({
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("type", typeFilter);
       const qs = params.size ? `?${params}` : "";
-      const res = await fetch(`/api/items${qs}`);
+      // no-store: a cached list is exactly how a just-saved item goes missing.
+      const res = await fetch(`/api/items${qs}`, { cache: "no-store" });
       const data: unknown = await res.json();
       const list: Item[] = Array.isArray(data) ? data : [];
       setItems(statusFilter ? list : list.filter((i) => !HIDDEN_WHEN_UNFILTERED.has(i.status)));
@@ -55,9 +56,20 @@ export function ItemList({
     load();
     // The sidebar capture bar notifies here (router.refresh doesn't
     // re-run client-component fetches, so this event is the refresh).
+    // focus/visibility covers the cross-tab case: saving in one tab leaves
+    // another tab's list stale, and same-window events don't cross tabs.
     const onChange = () => load();
+    const onVis = () => {
+      if (document.visibilityState === "visible") load();
+    };
     window.addEventListener("hoard:items-changed", onChange);
-    return () => window.removeEventListener("hoard:items-changed", onChange);
+    window.addEventListener("focus", onChange);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("hoard:items-changed", onChange);
+      window.removeEventListener("focus", onChange);
+      document.removeEventListener("visibilitychange", onVis);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter]);
 
