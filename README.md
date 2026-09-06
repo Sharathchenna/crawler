@@ -46,6 +46,7 @@ wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0003_qmd_fts.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0004_discovery_schedule.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0005_discovery_images.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0006_discovery_slots.sql
 wrangler d1 execute hoard --remote --file=db/seed.sql
 # Existing DBs: 0002 and 0003 are additive — safe to apply on top.
 
@@ -96,18 +97,20 @@ Filter programmatically with `GET /api/items?type=x,repo` and
 
 ## Discover — a finite alternative to scrolling X
 
-Open **Discover** (`/discover`) for an automatic daily tech digest. In **Sources
-and daily preferences**, enable the schedule, choose your interests, sources,
-and a 10, 20, or 30 minute budget. Scheduled editions target two carefully read
-articles, with a hard maximum of **five**. Manual discovery also accepts up to
-three favourite blog URLs when the daily schedule is paused.
+Open **Discover** (`/discover`) for an automatic tech digest that refreshes
+every three hours. In **Sources and schedule preferences**, enable the
+schedule, choose your interests, sources, and a 10, 20, or 30 minute budget.
+Scheduled editions target two carefully read articles, with a hard maximum of
+**five** per edition. Manual discovery also accepts up to
+three favourite blog URLs when the schedule is paused.
 The server enforces the article and estimated reading-time caps, strips common
-tracking parameters, excludes recent previously discovered/saved URLs (up to
-200 of each), and limits each domain to two articles.
+tracking parameters, excludes previously seen/saved URLs across all editions
+(up to 200 of each), and limits each domain to two articles per edition.
 
 Save an article into Hoard's existing Markdown reader, mark it read, or skip it.
-The edition has an end: **one edition per UTC day**, no infinite scrolling or
-rerolling a completed list. Failed manual crawls get one explicit retry. Reading state
+Each edition has an end: **one finite edition per 3-hour UTC slot** (00, 03,
+06, 09, 12, 15, 18, 21), no infinite scrolling or rerolling a completed
+edition. Failed manual crawls get one explicit retry per edition. Reading state
 and crawl IDs live in D1 and are private to your account. Preferences from your
 last edition are prefilled next time.
 
@@ -133,13 +136,14 @@ For production, apply the migration and add the secret before deploying:
 npx wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
 npx wrangler d1 execute hoard --remote --file=db/migrations/0004_discovery_schedule.sql
 npx wrangler d1 execute hoard --remote --file=db/migrations/0005_discovery_images.sql
+npx wrangler d1 execute hoard --remote --file=db/migrations/0006_discovery_slots.sql
 npx wrangler secret put TINYFISH_API_KEY
 npm run deploy
 ```
 
 The separate **`hoard-discovery` Worker** (`workers/discovery.ts`, configured in
-`wrangler.discovery.jsonc`) checks every five minutes. After **01:00 UTC**, it
-claims one edition per enabled user/day, collects public RSS/Atom feeds and HN's
+`wrangler.discovery.jsonc`) checks every five minutes and claims the current
+3-hour slot for each enabled user, collects public RSS/Atom feeds and HN's
 official API, and gives Tinyfish a fresh, diverse shortlist. It checks only up to
 30-day-old feed posts and 3-day-old HN stories, excludes previously seen URLs,
 and rotates category priority daily. The catalogue is in
@@ -177,8 +181,8 @@ discovery itself requires no paid third-party search API.
 
 API (existing Access/bearer authentication):
 
-- `GET /api/discover?day=YYYY-MM-DD` — configuration, schedule, edition history and results; polls active manual runs.
-- `POST /api/discover` — `{ "topics": "…", "seeds": [], "budget": 20 }`; starts or returns today's edition.
+- `GET /api/discover?day=YYYY-MM-DD&slot=0-7` — configuration, schedule, edition history and results; polls active manual runs. Defaults to your latest edition.
+- `POST /api/discover` — `{ "topics": "…", "seeds": [], "budget": 20 }`; starts or returns the current slot's edition.
 - `PATCH /api/discover` — `{ "id": "article-id", "status": "read" }`; status is `unread|read|skipped|saved`.
 - `PUT /api/discover` — `{ "enabled": true, "topics": "…", "budget": 30, "sourceIds": ["hn", "simon", "latent"] }`; update your daily schedule.
 - Saving uses existing `POST /api/capture { url }`, then marks the discovery article `saved`.
@@ -186,8 +190,8 @@ API (existing Access/bearer authentication):
 Verify with `npm run test:discovery` (mocked Tinyfish HTTP, real isolated local
 D1) and `npm run build`. Live discovery requires a configured Tinyfish account.
 
-For replacing X's discovery habit: bookmark `/discover`, pick a daily reading
-window, and leave when the edition is done. It supplies reading material; it
+For replacing X's discovery habit: bookmark `/discover`, check the latest
+slot, and leave when the edition is done. It supplies reading material; it
 doesn't block X or reproduce its conversations and social network.
 
 ## Search

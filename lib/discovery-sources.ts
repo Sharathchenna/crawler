@@ -1,5 +1,7 @@
 export const DEFAULT_TOPICS = "AI agents and developer tools; startups and indie building; systems, databases and security; a broad mix of thoughtful technology writing";
-export const DAILY_HOUR_UTC = 1;
+/** Editions run round the clock, one per 3-hour UTC slot (8 per day). */
+export const SLOT_HOURS = 3;
+export const SLOTS_PER_DAY = 8;
 export const DISCOVERY_SOURCES = [
   { id: "hn", name: "Hacker News", category: "Broad tech", url: "https://news.ycombinator.com/", feed: "", description: "Community-ranked links to original articles and new projects." },
   { id: "simon", name: "Simon Willison", category: "AI & tools", url: "https://simonwillison.net/", feed: "https://simonwillison.net/atom/everything/", description: "Hands-on AI engineering, agents and developer tools." },
@@ -26,7 +28,17 @@ export type SourceHealth = { id: string; count: number; error: string | null };
 
 export function nextEditionAt(now = new Date()): string {
   const next = new Date(now);
-  next.setUTCHours(DAILY_HOUR_UTC, 0, 0, 0);
-  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  next.setUTCMinutes(0, 0, 0);
+  next.setUTCHours(Math.floor(next.getUTCHours() / SLOT_HOURS) * SLOT_HOURS + SLOT_HOURS, 0, 0, 0);
   return next.toISOString();
+}
+
+/** Current 3-hour slot: { day: "YYYY-MM-DD" (UTC date of slot start), slot: 0-7 }. */
+export function slotOf(now = new Date()): { day: string; slot: number } {
+  return { day: now.toISOString().slice(0, 10), slot: Math.floor(now.getUTCHours() / SLOT_HOURS) };
+}
+
+/** "2026-09-06 · 15:00 UTC" label for an edition. */
+export function slotLabel(day: string, slot: number): string {
+  return `${day} · ${String(slot * SLOT_HOURS).padStart(2, "0")}:00 UTC`;
 }

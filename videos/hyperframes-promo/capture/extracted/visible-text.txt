@@ -1,0 +1,137 @@
+[h2] Documentation Index
+[p] Fetch the complete documentation index at:
+[a] /llms.txt
+[p] Use this file to discover all available pages before exploring further.
+[a] Skip to main content
+[span] HyperFrames
+[span] home page
+[div] Search...
+[span] Ask Assistant
+[span] Playground
+[span] Playground
+[span] Search...
+[span] Navigation
+[span] Start here
+[div] What is HyperFrames?
+[a] Guides
+[a] Studio
+[a] Catalog
+[a] Developers
+[span] Start here
+[span] What HyperFrames is
+[span] Make your first video
+[span] Go further
+[span] Developers
+[span] Examples
+[span] 30 Days of HyperFrames
+[span] Product updates
+[span] Weekly updates
+[span] Changelog
+[span] Choose where to create
+[span] Choose how to create
+[span] Create through an AI chat
+[span] Bring in a design
+[span] Prompt Guide
+[span] Prompt Guide
+[span] Level 1 — Your first video
+[span] Level 2 — Control
+[span] Level 3 — Life
+[span] Level 4 — Substance
+[span] Level 5 — Voice and sound
+[span] Level 6 — Scale
+[span] Level 7 — Capstone
+[span] Appendix
+[span] Workflows
+[span] Choose a workflow
+[span] Product or website
+[span] Faceless explainer
+[span] Pull request
+[span] Captions and talking head
+[span] Motion graphic
+[span] Music video
+[span] Presentation
+[span] Custom video
+[span] HyperFrames or Remotion?
+[span] Build the project
+[span] Project model
+[span] Overview
+[span] Images and video
+[span] Avatar presenter
+[span] Voice, sound, and captions
+[span] Remove a background
+[span] Color grading
+[span] Media effects
+[span] Finish and share
+[span] Get unstuck
+[span] Troubleshooting
+[span] Share feedback
+[span] On this page
+[a] What can it make?
+[a] Three things to know
+[a] Make one
+[a] Related topics
+[h1] What is HyperFrames?
+[span] Copy page
+[p] See what an AI agent can make with ordinary web technology.
+[span] Copy page
+[span] HyperFrames is an open-source framework that turns HTML into video. You make the request; an AI agent builds an editable project; HyperFrames plays or renders it.
+[span] What can it make?
+[span] Every tile below is a finished HyperFrames film. Open one to watch it with sound.
+[span] Colour grading and media effects
+[span] Real footage graded with LUTs, curves, and scopes — inside Studio.
+[span] ▶ Play ·
+[span] 48s
+[span] One shoot, many cuts
+[span] The same footage rendered as several vertical videos from one project.
+[span] ▶ Play ·
+[span] 44s
+[span] Cut to the music
+[span] A track analysed for beats and sections, then everything snapped to that grid.
+[span] ▶ Play ·
+[span] 90s
+[span] A pull request, explained
+[span] A code change turned into a review anyone on the team can watch.
+[span] ▶ Play ·
+[span] 32s
+[span] Editing on a timeline
+[span] Trimming, splitting, and retiming a project by hand.
+[span] ▶ Play ·
+[span] 34s
+[span] A year in review
+[span] Personal data turned into a shareable card, generated per person.
+[span] ▶ Play ·
+[span] 27s
+[span] Three things to know
+[strong] Agent-built.
+[span] You describe the video; the agent writes the HTML, CSS, and JavaScript. You do not need to write code for this path.
+[strong] Editable.
+[span] The result is a project folder, not a flattened black box. An agent, Studio, and your own tools can work on the same files.
+[strong] Reliable render.
+[span] HyperFrames asks the project for each exact frame instead of
+depending on live playback, so a slow machine does not drop moments from the
+finished video.
+[span] Make one
+[h2] Make your first video
+[span] Install the skills, make one short request, and choose how you want to continue.
+[span] Related topics
+[a] Watch more finished HyperFrames work
+[a] Go further with an existing project
+[a] Build on HyperFrames as a developer
+[p] Related topics
+[span] HyperFrames or Remotion?
+[span] Build on HyperFrames
+[span] How a HyperFrames project works
+[div] Make your first video
+[span] HyperFrames
+[span] home page
+[span] instagram
+[a] Introduction
+[a] Make your first video
+[a] Examples
+[a] Developers
+[p] Resources
+[a] Product updates
+[a] Playground
+[span] instagram
+[span] Powered by
+[span] This documentation is built and hosted on Mintlify, a developer documentation platform

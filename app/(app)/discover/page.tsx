@@ -5,9 +5,10 @@ import Link from "next/link";
 import { apiJson } from "@/components/api";
 import { domainOf } from "@/components/Shell";
 import type { DiscoveryResponse, DigestView } from "@/lib/discovery";
-import { DEFAULT_TOPICS, DISCOVERY_SOURCES } from "@/lib/discovery-sources";
+import { DEFAULT_TOPICS, DISCOVERY_SOURCES, slotLabel } from "@/lib/discovery-sources";
 
 type Article = DigestView["articles"][number];
+type Edition = { day: string; slot: number };
 
 /** Lead-image thumbnail with lazy og:image resolution. Stored imageUrl (feed
  * enclosure or Tinyfish og:image) renders immediately; cards missing one ask
@@ -38,6 +39,7 @@ function ArticleThumb({ article }: { article: Article }) {
 }
 const button = "rounded-[6px] border border-[var(--border)] px-3 py-1.5 text-[13px] hover:bg-[var(--bg-hover)] disabled:opacity-50";
 const field = "mt-1.5 w-full rounded-[6px] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none";
+const editionKey = (e: Edition) => `${e.day}|${e.slot}`;
 
 export default function DiscoverPage() {
   const [data, setData] = useState<DiscoveryResponse | null>(null);
@@ -48,7 +50,8 @@ export default function DiscoverPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showFinished, setShowFinished] = useState(false);
-  const [editionDay, setEditionDay] = useState("");
+  // Null = latest edition (server default); otherwise a pinned {day, slot}.
+  const [edition, setEdition] = useState<Edition | null>(null);
   const [dailyEnabled, setDailyEnabled] = useState(true);
   const [dailyTopics, setDailyTopics] = useState(DEFAULT_TOPICS);
   const [dailyBudget, setDailyBudget] = useState(30);
@@ -56,7 +59,8 @@ export default function DiscoverPage() {
 
   const load = useCallback(async (initialize = false, signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/discover${editionDay ? `?day=${editionDay}` : ""}`, { cache: "no-store", signal });
+      const qs = edition ? `?day=${edition.day}&slot=${edition.slot}` : "";
+      const response = await fetch(`/api/discover${qs}`, { cache: "no-store", signal });
       const next = await apiJson<DiscoveryResponse & { error?: string }>(response);
       if (!response.ok) throw new Error(next.error ?? "Could not load discovery.");
       setData(next);
@@ -73,7 +77,7 @@ export default function DiscoverPage() {
     } catch (e) {
       if (!signal?.aborted) setError(e instanceof Error ? e.message : "Could not load discovery.");
     }
-  }, [editionDay]);
+  }, [edition]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -104,6 +108,7 @@ export default function DiscoverPage() {
         await load();
         throw new Error(next.error ?? "Could not start discovery.");
       }
+      setEdition(null);
       setData(next);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not start discovery."); }
     finally { setBusy(null); }
@@ -119,7 +124,7 @@ export default function DiscoverPage() {
       const next = await apiJson<DiscoveryResponse & { error?: string }>(response);
       if (!response.ok) throw new Error(next.error ?? "Could not save schedule.");
       setData(next);
-      setNotice(dailyEnabled ? "Daily discovery is enabled. Results will arrive here automatically." : "Daily discovery is paused.");
+      setNotice(dailyEnabled ? "Discovery is enabled. A fresh edition lands every 3 hours, automatically." : "Scheduled editions are paused.");
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save schedule."); }
     finally { setBusy(null); }
   }
@@ -154,40 +159,51 @@ export default function DiscoverPage() {
 
   const remaining = digest?.articles.filter((a) => a.status === "unread") ?? [];
   const finished = digest?.articles.filter((a) => a.status !== "unread") ?? [];
-  const viewingToday = !editionDay || editionDay === new Date().toISOString().slice(0, 10);
-  const canStart = viewingToday && (!digest || (digest.origin !== "scheduled" && digest.status === "failed" && digest.attempts < 2));
+  const latest = data?.editions[0];
+  const viewingLatest = !edition || (latest !== undefined && editionKey(edition) === editionKey(latest));
+  const canStart = viewingLatest && (!digest || (digest.origin !== "scheduled" && digest.status === "failed" && digest.attempts < 2));
+
+  function pickEdition(value: string) {
+    setShowFinished(false);
+    if (!value) {
+      setEdition(null);
+      return;
+    }
+    const [day, slot] = value.split("|");
+    setEdition({ day, slot: Number(slot) });
+  }
 
   return (
     <div className="space-y-6 text-[var(--text)]">
       <header>
         <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--accent)]">A little curiosity. A clear stopping point.</p>
         <h1 className="text-[26px] font-semibold tracking-[-0.03em]">Discover</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-muted)]">Hacker News, independent blogs and tech newsletters, collected daily. Tinyfish reads a shortlist for you. Up to five reads, then get on with your day.</p>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-muted)]">Hacker News, independent blogs and tech newsletters, collected every three hours. Tinyfish reads a shortlist for you. Up to five reads per edition, then get on with your day.</p>
       </header>
 
       {data && data.editions.length > 0 && <label className="block text-sm text-[var(--text-muted)]">Edition
-        <select className={field} value={editionDay} onChange={(e) => { setEditionDay(e.target.value); setShowFinished(false); }}>
-          <option value="">Today</option>
-          {data.editions.filter((edition) => edition.day !== new Date().toISOString().slice(0, 10)).map((edition) => <option key={edition.day} value={edition.day}>{edition.day} · {edition.status}</option>)}
+        <select className={field} value={edition ? editionKey(edition) : ""} onChange={(e) => pickEdition(e.target.value)}>
+          <option value="">Latest</option>
+          {data.editions.map((e) => <option key={editionKey(e)} value={editionKey(e)}>{slotLabel(e.day, e.slot)} · {e.status}</option>)}
         </select>
       </label>}
 
       {error && <div role="alert" className="rounded-lg border border-[var(--border)] p-3 text-sm">{error} <button className="ml-2 underline" onClick={() => void load(!data)}>Check again</button></div>}
       {notice && <p role="status" className="text-sm text-[var(--text-muted)]">{notice}</p>}
-      {!data && !error && <p role="status" className="text-sm text-[var(--text-muted)]">Loading your daily edition…</p>}
+      {!data && !error && <p role="status" className="text-sm text-[var(--text-muted)]">Loading your latest edition…</p>}
 
       {data && <section className="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-medium">{data.schedule?.enabled ? "Daily discovery is on" : "Automatic daily discovery"}</h2>
-          <span className="font-mono text-xs text-[var(--text-muted)]">01:00 UTC · every day</span>
+          <h2 className="font-medium">{data.schedule?.enabled ? "Scheduled discovery is on" : "Automatic discovery every 3 hours"}</h2>
+          <span className="font-mono text-xs text-[var(--text-muted)]">00 · 03 · 06 · 09 · 12 · 15 · 18 · 21 UTC</span>
         </div>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{data.schedule?.enabled ? "Your sources are checked automatically, even when this page is closed. Results are usually ready by 01:15 UTC; delayed jobs catch up during the day." : "Enable once to get a fresh edition every day, without starting a crawl yourself."}</p>
-        {data.schedule?.enabled && <p className="mt-2 text-xs text-[var(--text-faint)]">Next daily start: {new Date(data.schedule.nextRunAt).toLocaleString()} (your timezone). {data.schedule.lastRunAt && `Last checked: ${new Date(data.schedule.lastRunAt).toLocaleString()}.`}</p>}
+        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{data.schedule?.enabled ? "Your sources are checked automatically, even when this page is closed. Each edition is usually ready ~15 minutes after its slot starts." : "Enable once to get a fresh edition every 3 hours, without starting a crawl yourself."}</p>
+        {data.schedule?.enabled && <p className="mt-2 text-xs text-[var(--text-faint)]">Next edition: {new Date(data.schedule.nextRunAt).toLocaleString()} (your timezone). {data.schedule.lastRunAt && `Last checked: ${new Date(data.schedule.lastRunAt).toLocaleString()}.`}</p>}
         {data.schedule?.lastError && <p className="mt-2 text-xs text-[var(--text-muted)]" role="status">{data.schedule.lastError}</p>}
         <details className="mt-4" open={!data.schedule}>
-          <summary className="cursor-pointer text-sm text-[var(--accent)]">Sources and daily preferences</summary>
+          <summary className="cursor-pointer text-sm text-[var(--accent)]">Sources and schedule preferences</summary>
           <form onSubmit={saveSchedule} className="mt-4 space-y-4">
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dailyEnabled} onChange={(e) => setDailyEnabled(e.target.checked)} /> Automatically prepare a daily edition</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dailyEnabled} onChange={(e) => setDailyEnabled(e.target.checked)} /> Automatically prepare an edition every 3 hours</label>
             <label className="block text-sm">Interests<textarea className={field} rows={3} minLength={3} maxLength={500} required value={dailyTopics} onChange={(e) => setDailyTopics(e.target.value)} /></label>
             <label className="block text-sm">Reading budget<select className={field} value={dailyBudget} onChange={(e) => setDailyBudget(Number(e.target.value))}>{[10, 20, 30].map((n) => <option key={n} value={n}>{n} minutes</option>)}</select></label>
             <fieldset className="space-y-3">
@@ -203,8 +219,8 @@ export default function DiscoverPage() {
                 </div>;
               })}
             </fieldset>
-            <p className="text-xs leading-5 text-[var(--text-faint)]">Public feeds and Hacker News need no API key. One Tinyfish run per automatic edition, up to five browser minutes. If it fails, clearly labelled publisher previews still appear. Paid newsletter content is not unlocked.</p>
-            <button className={button} type="submit" disabled={!!busy || !sourceIds.length}>{busy === "schedule" ? "Saving…" : "Save daily preferences"}</button>
+            <p className="text-xs leading-5 text-[var(--text-faint)]">Public feeds and Hacker News need no API key. One Tinyfish run per edition, up to five browser minutes. If it fails, clearly labelled publisher previews still appear. Paid newsletter content is not unlocked.</p>
+            <button className={button} type="submit" disabled={!!busy || !sourceIds.length}>{busy === "schedule" ? "Saving…" : "Save preferences"}</button>
           </form>
         </details>
       </section>}
@@ -226,22 +242,22 @@ export default function DiscoverPage() {
             <textarea className={field} rows={3} maxLength={6200} value={seeds} onChange={(e) => setSeeds(e.target.value)} placeholder={"https://simonwillison.net/\nhttps://jvns.ca/"} />
           </label>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <label className="text-[13px] font-medium">Daily reading budget
+            <label className="text-[13px] font-medium">Reading budget
               <select className={field} value={budget} onChange={(e) => setBudget(Number(e.target.value))}>
                 {[10, 20, 30].map((n) => <option key={n} value={n}>{n} minutes</option>)}
               </select>
             </label>
             <button type="submit" disabled={!!busy || !data.configured} className="rounded-[6px] bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hi)] disabled:opacity-50">
-              {busy === "crawl" ? "Starting…" : digest?.status === "failed" ? "Retry today's crawl" : "Find today's reads"}
+              {busy === "crawl" ? "Starting…" : digest?.status === "failed" ? "Retry this edition" : "Find today's reads"}
             </button>
           </div>
-          <p className="text-xs leading-5 text-[var(--text-faint)]">One edition per UTC day. Each crawl uses your Tinyfish account credits and runs for up to five minutes. Reading times are estimates.</p>
+          <p className="text-xs leading-5 text-[var(--text-faint)]">One edition per 3-hour slot. Each crawl uses your Tinyfish account credits and runs for up to five minutes. Reading times are estimates.</p>
         </form>
       )}
 
-      {digest?.status === "failed" && <p role="status" className="text-sm text-[var(--text-muted)]">{digest.error} {digest.attempts >= 2 && "Today's two attempts are used. A fresh edition is available tomorrow (UTC)."}</p>}
+      {digest?.status === "failed" && <p role="status" className="text-sm text-[var(--text-muted)]">{digest.error} {digest.attempts >= 2 && "This edition's two attempts are used. The next slot starts fresh."}</p>}
 
-      {data?.schedule?.enabled && !digest && <p role="status" className="text-sm text-[var(--text-muted)]">Today's edition hasn't started yet. The scheduler checks every five minutes after 01:00 UTC; you don't need to keep this page open.</p>}
+      {data?.schedule?.enabled && !digest && <p role="status" className="text-sm text-[var(--text-muted)]">This slot's edition hasn't started yet. The scheduler checks every five minutes; you don't need to keep this page open.</p>}
 
       {running && <section role="status" className="rounded-lg border border-[var(--border)] p-6">
         <h2 className="text-lg font-medium">Tinyfish is out reading.</h2>
@@ -253,13 +269,13 @@ export default function DiscoverPage() {
         <section className="space-y-4">
           {digest.error && <p role="status" className="text-sm text-[var(--text-muted)]">{digest.error}</p>}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-soft)] pb-3">
-            <h2 className="text-sm font-medium">Your {digest.day} edition <span className="text-[var(--text-faint)]">· UTC</span></h2>
+            <h2 className="text-sm font-medium">Your {slotLabel(digest.day, digest.slot)} edition</h2>
             <p className="font-mono text-xs text-[var(--text-muted)]">{remaining.length} left · ~{remaining.reduce((sum, a) => sum + a.minutes, 0)} min</p>
           </div>
           <p className="text-xs text-[var(--text-muted)]">{digest.topics} · {digest.budget}-minute budget</p>
           {remaining.length === 0 && <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-7">
-            <h3 className="text-xl font-medium">{digest.articles.length ? "You're done for today." : "Nothing worth adding today."}</h3>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{digest.articles.length ? "Your reading list has an end. Take something you learned and go make something." : "No new articles met your filters and reading budget. A short list beats filler."} Come back tomorrow for a fresh edition.</p>
+            <h3 className="text-xl font-medium">{digest.articles.length ? "You're done with this edition." : "Nothing worth adding this time."}</h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{digest.articles.length ? "Your reading list has an end. Take something you learned and go make something." : "No new articles met your filters and reading budget. A short list beats filler."} The next edition lands on the next slot.</p>
             <Link href="/articles" className="mt-4 inline-block text-sm text-[var(--accent)] underline">Open your saved articles →</Link>
           </div>}
           {(showFinished ? digest.articles : remaining).map((article) => (

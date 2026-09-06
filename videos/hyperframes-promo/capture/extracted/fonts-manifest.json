@@ -1,0 +1,247 @@
+{
+  "files": [
+    {
+      "file": "LM-italic.ttf",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Italic",
+      "postscript": "LMRoman10-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "LM-italic.woff",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Italic",
+      "postscript": "LMRoman10-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "LM-italic.woff2",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Italic",
+      "postscript": "LMRoman10-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "LM-regular.ttf",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Regular",
+      "postscript": "LMRoman10-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "LM-regular.woff",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Regular",
+      "postscript": "LMRoman10-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "LM-regular.woff2",
+      "family": "LMRoman10",
+      "rawFamily": "LMRoman10",
+      "subfamily": "Regular",
+      "postscript": "LMRoman10-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "PaperMono_Variable.p.aa32f7a0.woff2",
+      "family": "Paper Mono",
+      "rawFamily": "Paper Mono",
+      "subfamily": "Regular",
+      "postscript": "PaperMono-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L0UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L1UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L2UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L3UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L6UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L9UUMbndwVgHU.woff2",
+      "family": "Inter",
+      "rawFamily": "Inter",
+      "subfamily": "Italic",
+      "postscript": "Inter-Italic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "cmuntt.woff",
+      "family": "CMU Typewriter Text",
+      "rawFamily": "CMU Typewriter Text",
+      "subfamily": "Regular",
+      "postscript": "CMUTypewriter-Regular",
+      "weight": 500,
+      "style": "normal",
+      "variationAxes": [],
+      "identified": true,
+      "isIcon": false
+    }
+  ],
+  "families": [
+    {
+      "family": "CMU Typewriter Text",
+      "weights": [
+        500
+      ],
+      "variable": false,
+      "fileCount": 1,
+      "files": [
+        "cmuntt.woff"
+      ]
+    },
+    {
+      "family": "Inter",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 6,
+      "files": [
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L0UUMbndwVgHU.woff2",
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L1UUMbndwVgHU.woff2",
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L2UUMbndwVgHU.woff2",
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L3UUMbndwVgHU.woff2",
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L6UUMbndwVgHU.woff2",
+        "UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L9UUMbndwVgHU.woff2"
+      ]
+    },
+    {
+      "family": "LMRoman10",
+      "weights": [
+        400
+      ],
+      "variable": false,
+      "fileCount": 6,
+      "files": [
+        "LM-italic.ttf",
+        "LM-italic.woff",
+        "LM-italic.woff2",
+        "LM-regular.ttf",
+        "LM-regular.woff",
+        "LM-regular.woff2"
+      ]
+    },
+    {
+      "family": "Paper Mono",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 1,
+      "files": [
+        "PaperMono_Variable.p.aa32f7a0.woff2"
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-09-06T17:28:21.493Z",
+    "tool": "fontkit"
+  }
+}

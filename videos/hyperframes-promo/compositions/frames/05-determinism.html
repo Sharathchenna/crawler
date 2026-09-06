@@ -1,0 +1,127 @@
+<template>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face{font-family:"paperMono";font-weight:400;font-style:normal;font-display:block;src:url("assets/fonts/paperMono-Regular.woff2") format("woff2");}
+@font-face{font-family:"CMU Typewriter Text";font-weight:400;font-style:normal;font-display:block;src:url("capture/assets/fonts/cmuntt.woff") format("woff");}
+#root{position:relative;width:1920px;height:1080px;container-type:size;overflow:hidden;color:#707372;font-family:"paperMono",Georgia,serif;}
+.f05-clip{position:absolute;inset:0;}
+.f05-ground{background-color:#000000;background-image:repeating-linear-gradient(0deg,rgba(23,121,91,0.13) 0 1px,transparent 1px 120px),repeating-linear-gradient(90deg,rgba(23,121,91,0.13) 0 1px,transparent 1px 120px);}
+.f05-rail{position:absolute;left:1180px;top:220px;width:660px;height:640px;background:#08291F;border:1px solid rgba(112,115,114,0.20);border-radius:12px;overflow:hidden;}
+.f05-watermark{position:absolute;right:-30px;bottom:-70px;font-family:"CMU Typewriter Text",ui-monospace,monospace;font-size:300px;line-height:1;color:#17795B;opacity:0.10;white-space:nowrap;}
+.f05-railrows{position:absolute;left:48px;top:52px;}
+.f05-railrow{font-family:"CMU Typewriter Text",ui-monospace,monospace;font-size:26px;letter-spacing:0.02em;color:#707372;margin-bottom:30px;white-space:nowrap;}
+.f05-railrow-dim{opacity:0.6;}
+.f05-railrule{width:200px;height:1px;background:rgba(112,115,114,0.20);margin:34px 0;}
+.f05-kicker{position:absolute;left:80px;top:72px;font-family:"CMU Typewriter Text",ui-monospace,monospace;font-size:28px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#707372;white-space:nowrap;}
+.f05-spike-inline{color:#16785B;}
+.f05-runlabel{font-family:"CMU Typewriter Text",ui-monospace,monospace;font-size:26px;letter-spacing:0.02em;color:#707372;white-space:nowrap;margin-bottom:14px;}
+.f05-block-a{position:absolute;left:80px;top:286px;}
+.f05-block-b{position:absolute;left:80px;top:486px;}
+.f05-hashline{perspective:1500px;font-family:"CMU Typewriter Text",ui-monospace,monospace;font-size:46px;letter-spacing:0.04em;color:#707372;white-space:nowrap;}
+.f05-hashtext{display:inline-block;min-width:19ch;white-space:nowrap;}
+.f05-prefixb{display:inline-block;min-width:13ch;white-space:nowrap;}
+.f05-cursor{display:inline-block;width:20px;}
+.f05-tailwrap{position:relative;display:inline-block;white-space:nowrap;}
+.f05-tghost{position:absolute;left:0;top:0;opacity:0;pointer-events:none;white-space:nowrap;}
+.f05-tailchar{display:inline-block;transform-origin:bottom;transform-style:preserve-3d;color:#E8A55A;}
+.f05-sweep{position:absolute;left:-8px;right:-8px;top:6px;bottom:2px;background:#E8A55A;opacity:0.28;border-radius:3px;transform-origin:left center;}
+.f05-titleblock{position:absolute;left:80px;top:648px;}
+.f05-titleline{font-size:88px;line-height:1.06;letter-spacing:-0.018em;color:#707372;white-space:nowrap;}
+.f05-titlespike{color:#16785B;display:inline-block;margin-right:18px;}
+</style>
+<div data-hf-id="hf-0hh6" id="root" data-composition-id="05-determinism" data-width="1920" data-height="1080" data-duration="5.151">
+<div data-hf-id="hf-7ev1" class="clip f05-clip f05-ground" data-start="0" data-duration="5.151" data-track-index="0"></div>
+<div data-hf-id="hf-eqid" class="clip f05-clip" data-start="0" data-duration="5.151" data-track-index="1">
+<div data-hf-id="hf-diu4" class="f05-rail">
+<div data-hf-id="hf-g47n" class="f05-watermark">a3f9</div>
+<div data-hf-id="hf-zf0j" class="f05-railrows">
+<div data-hf-id="hf-bht0" class="f05-railrow">run 01 <span data-hf-id="hf-rfpm" class="f05-railrow-dim">— set</span></div>
+<div data-hf-id="hf-aavx" class="f05-railrow">run 02 <span data-hf-id="hf-lm32" class="f05-railrow-dim">— set</span></div>
+<div data-hf-id="hf-m0ri" class="f05-railrule"></div>
+<div data-hf-id="hf-vjee" class="f05-railrow">delta <span data-hf-id="hf-5ioe" class="f05-railrow-dim">— 0</span></div>
+</div>
+</div>
+</div>
+<div data-hf-id="hf-iome" class="clip f05-clip" data-start="0" data-duration="5.151" data-track-index="2">
+<div data-hf-id="hf-ezn6" class="f05-kicker" id="f05-kicker"><span data-hf-id="hf-99fk" class="f05-spike-inline">✱</span> Render check</div>
+<div data-hf-id="hf-fqyx" class="f05-block-a">
+<div data-hf-id="hf-ozem" class="f05-runlabel" id="f05-labela">run 01</div>
+<div data-hf-id="hf-zxky" class="f05-hashline"><span data-hf-id="hf-u9q4" class="f05-hashtext" id="f05-texta"></span><span data-hf-id="hf-giut" class="f05-cursor" id="f05-cursora">_</span></div>
+</div>
+<div data-hf-id="hf-jp2y" class="f05-block-b">
+<div data-hf-id="hf-yx10" class="f05-runlabel" id="f05-labelb">run 02</div>
+<div data-hf-id="hf-sso6" class="f05-hashline"><span data-hf-id="hf-67a3" class="f05-prefixb" id="f05-prefixb"></span><span data-hf-id="hf-nnmr" class="f05-tailwrap" id="f05-tailwrap"><span data-hf-id="hf-7pz2" class="f05-tghost">07d1</span><span data-hf-id="hf-jj23" class="f05-sweep" id="f05-sweep"></span><span data-hf-id="hf-7mo7" class="f05-tailchar">f</span><span data-hf-id="hf-q56z" class="f05-tailchar">2</span><span data-hf-id="hf-8tla" class="f05-tailchar">a</span><span data-hf-id="hf-sxc6" class="f05-tailchar">9</span></span></div>
+</div>
+</div>
+<div data-hf-id="hf-7gci" class="clip f05-clip" data-start="3.2" data-duration="1.951" data-track-index="3">
+<div data-hf-id="hf-2lln" class="f05-titleblock" id="f05-title">
+<div data-hf-id="hf-4ftz" class="f05-titleline" id="f05-line1"><span data-hf-id="hf-3xw2" class="f05-titlespike" id="f05-spike">✱</span>Deterministic,</div>
+<div data-hf-id="hf-17ab" class="f05-titleline" id="f05-line2">built for CI.</div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+window.__timelines = window.__timelines || {};
+var tl = gsap.timeline({ paused: true });
+window.__timelines["05-determinism"] = tl;
+tl.to({}, { duration: 4.651, ease: "none" }, 0);
+function textAt(seq, time){
+for(var i = seq.length - 1; i >= 0; i--){ if(time >= seq[i].t) return seq[i].text; }
+return "";
+}
+var SEQ_A = [
+{ t: 0.00, text: "" },
+{ t: 0.10, text: "a3f9" },
+{ t: 0.45, text: "a3f9 c41e" },
+{ t: 0.80, text: "a3f9 c41e 88b2" },
+{ t: 1.15, text: "a3f9 c41e 88b2 07d1" }
+];
+var SEQ_B = [
+{ t: 0.00, text: "" },
+{ t: 0.35, text: "a3f9" },
+{ t: 0.70, text: "a3f9 c41e" },
+{ t: 1.05, text: "a3f9 c41e 88b2 " }
+];
+var textA = document.getElementById("f05-texta");
+var prefixB = document.getElementById("f05-prefixb");
+var cursorA = document.getElementById("f05-cursora");
+var drvA = { t: 0 };
+tl.to(drvA, { t: 1.6, duration: 1.6, ease: "none", onUpdate: function(){ textA.textContent = textAt(SEQ_A, drvA.t); } }, 0);
+var drvB = { t: 0 };
+tl.to(drvB, { t: 1.6, duration: 1.6, ease: "none", onUpdate: function(){ prefixB.textContent = textAt(SEQ_B, drvB.t); } }, 0);
+var blink = { p: 0 };
+tl.to(blink, { p: Math.PI * 2 * 3, duration: 1.6, ease: "none", onUpdate: function(){ cursorA.style.opacity = Math.sin(blink.p) > 0 ? "1" : "0"; } }, 0);
+tl.set(cursorA, { opacity: 0 }, 1.6);
+tl.fromTo("#f05-kicker", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0);
+tl.fromTo("#f05-labela", { opacity: 0 }, { opacity: 0.65, duration: 0.3, ease: "power1.out" }, 0.05);
+tl.fromTo("#f05-labelb", { opacity: 0 }, { opacity: 0.65, duration: 0.3, ease: "power1.out" }, 0.3);
+var tailChars = document.querySelectorAll("#f05-tailwrap .f05-tailchar");
+tl.set(tailChars, { opacity: 0 }, 0);
+tl.to(tailChars, { opacity: 1, duration: 0.18, ease: "power1.out", stagger: 0.08 }, 1.0);
+var GLYPHS = "ABCDEF0123456789";
+var TARGETS = ["0", "7", "d", "1"];
+function pseudoGlyph(seed){
+var h = ((seed * 9301 + 49297) % 233280) / 233280;
+return GLYPHS[Math.floor(h * GLYPHS.length)];
+}
+tailChars.forEach(function(el, i){
+var state = { p: 0 };
+tl.to(state, {
+p: 1, duration: 0.7, ease: "power3.out",
+onUpdate: function(){
+if(state.p < 0.6){ el.textContent = pseudoGlyph(i * 1000 + Math.floor(state.p * 100)); }
+else { el.textContent = TARGETS[i]; el.style.color = "#707372"; }
+el.style.transform = "rotateX(" + (90 - state.p * 90) + "deg)";
+el.style.opacity = Math.min(1, state.p * 2);
+}
+}, 1.6 + i * 0.06);
+});
+tl.set("#f05-sweep", { scaleX: 0 }, 0);
+tl.to("#f05-sweep", { scaleX: 1, duration: 0.5, ease: "power2.out" }, 2.7);
+tl.fromTo("#f05-line1", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" }, 3.2);
+tl.fromTo("#f05-line2", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" }, 3.32);
+tl.fromTo("#f05-spike", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }, 3.2);
+})();
+</script>
+</template>

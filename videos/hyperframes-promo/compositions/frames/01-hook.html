@@ -1,0 +1,132 @@
+<template data-composition-id="01-hook" data-width="1920" data-height="1080">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+@font-face{font-family:"paperMono";font-weight:400;font-style:normal;font-display:block;src:url("assets/fonts/paperMono-Regular.woff2") format("woff2");}
+#root{position:relative;width:1920px;height:1080px;overflow:hidden;container-type:size;}
+#root .clip{position:absolute;inset:0;}
+#root .bg-fill{position:absolute;inset:0;background:#000000;}
+#root .bg-rule{position:absolute;left:80px;right:80px;top:132px;height:1px;background:rgba(112,115,114,0.16);}
+#root .kicker{position:absolute;top:72px;left:80px;font-family:"paperMono",Georgia,serif;font-weight:400;font-size:26px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(112,115,114,0.72);white-space:nowrap;}
+#root .flash{position:absolute;inset:0;border:10px solid #16785B;opacity:0;pointer-events:none;}
+#root .stage{position:absolute;top:132px;left:0;right:0;height:758px;display:flex;align-items:center;justify-content:center;}
+#root .cyclewrap{width:1500px;max-width:78cqw;text-align:center;transform-origin:50% 50%;}
+#root .ticker{display:inline-block;font-family:"paperMono",Georgia,serif;font-weight:400;font-size:8cqw;line-height:1.02;letter-spacing:-0.022em;color:#707372;white-space:nowrap;}
+#root .no{position:absolute;left:0;right:0;top:132px;height:758px;display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;}
+#root .no-word{font-family:"paperMono",Georgia,serif;font-weight:400;font-style:italic;font-size:9.9cqw;line-height:0.98;letter-spacing:-0.028em;color:#707372;}
+#root .hero{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;width:1500px;max-width:78cqw;}
+#root .word{display:inline-block;font-family:"paperMono",Georgia,serif;font-weight:400;font-size:6.4cqw;line-height:1.06;letter-spacing:-0.018em;color:#707372;margin:0 0.13em;transform-origin:50% 50%;}
+</style>
+<div data-hf-id="hf-psve" id="root" data-composition-id="01-hook" data-width="1920" data-height="1080" data-duration="5.371">
+  <div data-hf-id="hf-ddz2" class="clip" data-start="0" data-duration="5.371" data-track-index="0">
+    <div data-hf-id="hf-xhfx" class="bg-fill"></div>
+    <div data-hf-id="hf-3hho" class="bg-rule"></div>
+    <div data-hf-id="hf-0bp7" class="kicker"><span data-hf-id="hf-zak0">✱</span> 01 — hook</div>
+    <div data-hf-id="hf-nble" class="flash" id="01-hook-flash"></div>
+  </div>
+  <div data-hf-id="hf-uwsa" class="clip" data-start="0" data-duration="3.02" data-track-index="1">
+    <div data-hf-id="hf-tan6" class="stage">
+      <div data-hf-id="hf-jhcq" class="cyclewrap" id="01-hook-cyclewrap">
+        <span data-hf-id="hf-v4dx" class="ticker" id="01-hook-ticker">After Effects</span>
+      </div>
+    </div>
+  </div>
+  <div data-hf-id="hf-tk5i" class="clip" data-start="2.2" data-duration="1.12" data-track-index="2">
+    <div data-hf-id="hf-sxqu" class="no" id="01-hook-no"><span data-hf-id="hf-1d2k" class="no-word">no.</span></div>
+  </div>
+  <div data-hf-id="hf-e3ld" class="clip" data-start="3.02" data-duration="2.351" data-track-index="3">
+    <div data-hf-id="hf-xa86" class="stage">
+      <div data-hf-id="hf-dz0y" class="hero" id="01-hook-hero">
+        <span data-hf-id="hf-iol7" class="word" id="01-hook-w-this">This</span>
+        <span data-hf-id="hf-yafb" class="word" id="01-hook-w-video">video</span>
+        <span data-hf-id="hf-by6b" class="word" id="01-hook-w-is">is</span>
+        <span data-hf-id="hf-i0dj" class="word" id="01-hook-w-a">a</span>
+        <span data-hf-id="hf-exsr" class="word" id="01-hook-w-web">web</span>
+        <span data-hf-id="hf-k2j9" class="word" id="01-hook-w-page">page.</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.__timelines = window.__timelines || {};
+(function(){
+  var D = 4.971;
+  var tl = gsap.timeline({ paused: true });
+
+  /* Scene 1 (0.0-2.2s): discrete-text-sequence — one centered line, whole-state
+     hard cuts on the spoken cues (reverse-search + swap-only-on-transition). */
+  var SEQUENCE = [
+    { t: 0.0, text: "After Effects" },
+    { t: 0.75, text: "Premiere" },
+    { t: 1.45, text: "a React build" }
+  ];
+  function textAt(time){
+    for (var i = SEQUENCE.length - 1; i >= 0; i--){
+      if (time >= SEQUENCE[i].t) return SEQUENCE[i].text;
+    }
+    return SEQUENCE[0].text;
+  }
+  var tickerEl = document.getElementById("01-hook-ticker");
+  var lastTicker = "";
+  var cyc = { t: 0 };
+  tl.to(cyc, { t: 2.2, duration: 2.2, ease: "none", onUpdate: function(){
+    var s = textAt(cyc.t);
+    if (s !== lastTicker){ tickerEl.textContent = s; lastTicker = s; }
+  } }, 0);
+  tl.fromTo("#01-hook-ticker", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 0);
+
+  /* Scene 2 (2.2-3.1s): scale-swap-transition — cycle shoves out, "no." pops in
+     with back.out weight; single coral edge flash on the swap. */
+  tl.to("#01-hook-cyclewrap", { scale: 0.7, opacity: 0, duration: 0.35, ease: "power2.in" }, 2.2);
+  tl.fromTo("#01-hook-flash", { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "none" }, 2.32);
+  tl.to("#01-hook-flash", { opacity: 0, duration: 0.3, ease: "none" }, 2.4);
+  tl.fromTo("#01-hook-no", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)" }, 2.4);
+
+  /* Takeover into Scene 3: "no." yields as the hero claim resolves. */
+  tl.to("#01-hook-no", { scale: 0.7, opacity: 0, duration: 0.3, ease: "power2.in" }, 3.02);
+
+  /* Scene 3 (3.1-4.971s): dynamic-content-sequencing — per-word staggered
+     reveal of the hero claim, paced across the voiceover. */
+  tl.fromTo("#01-hook-w-this", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 3.10);
+  tl.fromTo("#01-hook-w-video", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 3.28);
+  tl.fromTo("#01-hook-w-is", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 3.42);
+  tl.fromTo("#01-hook-w-a", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 3.54);
+  tl.fromTo("#01-hook-w-web", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power3.out" }, 3.70);
+  tl.fromTo("#01-hook-w-page", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power3.out" }, 3.92);
+
+  /* asr-keyword-glow (karaoke style) on "web page" — one linear driver looping
+     all words, attack/sustain/release envelope, driver ease stays "none".
+     Glow words reveal with opacity-only above so the driver's scale never
+     fights a GSAP y tween on the same element. */
+  var ATTACK = 0.12, RELEASE = 0.4, REST = 0.15, MAX_BLUR = 32, MAX_SCALE = 0.20;
+  var TIMINGS = {
+    "01-hook-w-web": { start: 3.95, end: 4.20 },
+    "01-hook-w-page": { start: 4.25, end: 4.70 }
+  };
+  function envelope(time, start, end){
+    if (time < start) return 0;
+    if (time < end) return Math.min((time - start) / ATTACK, 1);
+    var re = end + RELEASE;
+    if (time < re) return 1 - ((time - end) / RELEASE) * (1 - REST);
+    return REST;
+  }
+  function lerp(a, b, t){ return Math.round(a + (b - a) * t); }
+  var REST_RGB = { r: 67, g: 68, b: 68 };
+  var ACTIVE_RGB = { r: 231, g: 234, b: 233 };
+  var glowEls = [document.getElementById("01-hook-w-web"), document.getElementById("01-hook-w-page")];
+  var gd = { t: 0 };
+  tl.to(gd, { t: D, duration: D, ease: "none", onUpdate: function(){
+    for (var i = 0; i < glowEls.length; i++){
+      var el = glowEls[i];
+      var tm = TIMINGS[el.id];
+      if (!tm) continue;
+      var env = envelope(gd.t, tm.start, tm.end);
+      el.style.color = "rgb(" + lerp(REST_RGB.r, ACTIVE_RGB.r, env) + "," + lerp(REST_RGB.g, ACTIVE_RGB.g, env) + "," + lerp(REST_RGB.b, ACTIVE_RGB.b, env) + ")";
+      el.style.textShadow = "0 0 " + (MAX_BLUR * env).toFixed(1) + "px rgba(231,234,233," + (0.85 * env).toFixed(3) + ")";
+      el.style.transform = "scale(" + (1 + MAX_SCALE * env).toFixed(4) + ")";
+    }
+  } }, 0);
+
+  window.__timelines["01-hook"] = tl;
+})();
+</script>
+</template>

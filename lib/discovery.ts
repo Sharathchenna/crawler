@@ -5,15 +5,15 @@ export type DiscoveredArticle = {
   imageUrl: string;
 };
 export type DigestView = {
-  id: string; day: string; topics: string; seeds: string; budget: number;
+  id: string; day: string; slot: number; topics: string; seeds: string; budget: number;
   status: string; error: string | null; attempts: number;
   origin: string;
   articles: (DiscoveredArticle & { id: string; status: string; itemId: string | null })[];
 };
 export type DiscoveryResponse = {
   configured: boolean; digest: DigestView | null; preferences: DiscoveryInput | null;
-  editionDay: string;
-  editions: { day: string; status: string }[];
+  editionDay: string; editionSlot: number;
+  editions: { day: string; slot: number; status: string }[];
   schedule: { enabled: boolean; topics: string; budget: number; sourceIds: string[]; nextRunAt: string; lastRunAt: string | null; lastError: string | null; sourceHealth: import("./discovery-sources").SourceHealth[] } | null;
 };
 

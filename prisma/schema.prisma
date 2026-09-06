@@ -157,7 +157,8 @@ model DiscoveryDigest {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  day          String   // UTC date; one finite edition per user per day
+  day          String   // UTC date of the slot start
+  slot         Int      @default(0) // 3-hour slot index within the UTC day (0-7)
   topics       String
   seeds        String   @default("[]")
   budget       Int      @default(20)
@@ -171,7 +172,7 @@ model DiscoveryDigest {
   candidates   String   @default("[]")
   articles     DiscoveryArticle[]
 
-  @@unique([userId, day])
+  @@unique([userId, day, slot])
   @@map("discovery_digests")
 }
 

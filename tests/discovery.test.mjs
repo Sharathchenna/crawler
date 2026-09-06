@@ -23,7 +23,7 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), { stat
 before(async () => {
   mf = new Miniflare(convertV4MiniflareOptions({ modules: true, script: "export default { fetch() { return new Response('ok'); } }", d1Databases: ["DB"], compatibilityDate: "2024-12-30" }));
   const binding = await mf.getD1Database("DB");
-  for (const file of ["0001_init.sql", "0002_discovery.sql", "0004_discovery_schedule.sql", "0005_discovery_images.sql"]) {
+  for (const file of ["0001_init.sql", "0002_discovery.sql", "0004_discovery_schedule.sql", "0005_discovery_images.sql", "0006_discovery_slots.sql"]) {
     const sql = await readFile(`db/migrations/${file}`, "utf8");
     for (const statement of sql.split(";").filter((s) => s.trim())) await binding.prepare(statement).run();
   }
@@ -228,17 +228,27 @@ test("scheduler publishes attributed previews if Tinyfish fails and does not lau
   assert.equal(starts,1);
 });
 
-test("scheduler honors pause, start time, existing editions, and stale-start recovery", async () => {
+test("scheduler honors pause, slot boundaries, and stale-start recovery", async () => {
   const env = { DB:globalThis.__discoveryTest.binding, TINYFISH_API_KEY:"test", CRON_SECRET:"test" };
   const fetch = mock.method(globalThis,"fetch",()=>{throw new Error("Unexpected fetch");});
   await db.discoverySchedule.create({data:{userId:"reader",enabled:false,topics:"tools",budget:20,sourceIds:'["simon"]'}});
   await api.runScheduledDiscovery(env,new Date("2026-09-07T01:00:00Z"));
   assert.equal(await db.discoveryDigest.count(),0);
   await db.discoverySchedule.update({where:{userId:"reader"},data:{enabled:true}});
+  // No start-hour gate: an enabled schedule claims the current slot immediately.
   await api.runScheduledDiscovery(env,new Date("2026-09-07T00:15:00Z"));
-  assert.equal(await db.discoveryDigest.count(),0);
-  await db.discoveryDigest.create({data:{userId:"reader",day:"2026-09-07",topics:"tools",origin:"scheduled",startedAt:new Date("2026-09-07T01:00:00Z")}});
+  assert.equal(await db.discoveryDigest.count(),1);
+  assert.equal((await db.discoveryDigest.findFirst()).slot,0);
+  // Same slot is idempotent across ticks; the next slot opens a new edition.
   await api.runScheduledDiscovery(env,new Date("2026-09-07T01:10:00Z"));
-  assert.equal((await db.discoveryDigest.findFirst()).status,"ready");
+  assert.equal(await db.discoveryDigest.count(),1);
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T03:05:00Z"));
+  assert.equal(await db.discoveryDigest.count(),2);
+  assert.deepEqual((await db.discoveryDigest.findMany({orderBy:{slot:"asc"}})).map((d) => d.slot),[0,1]);
+  // A stale 'starting' digest finishes feed-only without paid runs.
+  fetch.mock.resetCalls();
+  await db.discoveryDigest.create({data:{userId:"reader",day:"2026-09-07",slot:5,topics:"tools",origin:"scheduled",startedAt:new Date("2026-09-07T16:00:00Z")}});
+  await api.runScheduledDiscovery(env,new Date("2026-09-07T16:10:00Z"));
+  assert.equal((await db.discoveryDigest.findFirst({where:{slot:5}})).status,"ready");
   assert.equal(fetch.mock.callCount(),0);
 });

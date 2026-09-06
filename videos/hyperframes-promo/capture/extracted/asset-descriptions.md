@@ -1,0 +1,75 @@
+# Asset Descriptions
+
+⚠️  No vision credentials — descriptions below are catalog-derived (alt text, headings, section context, filename) instead of Vision-generated. To get richer Vision descriptions on the next capture, set GEMINI_API_KEY (or GOOGLE_API_KEY), or HYPERFRAMES_VERTEX_PROJECT_ID plus HYPERFRAMES_VERTEX_SERVICE_ACCOUNT for Vertex service-account auth, and re-run.
+
+The `logo-<hash>.svg` filename prefix is a structural hint (DOM said this SVG was inside a `<header>`, home-link `<a>`, or had an aria-label matching the page brand). To pick the actual brand logo without Vision, open the `logo-*` candidates in a previewer or rasterize them with `sharp` before referencing — composing a fake logo ships off-brand in the final video.
+
+- journey-introduction-v5-v2.mp4 — [video] See what an AI agent can make with ordinary web technology., ~1280×720
+- tile-grading-v2.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- tile-variables.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- tile-music.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- tile-prvideo.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- tile-timeline.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- tile-hypecard.mp4 — [video] See what an AI agent can make with ordinary web technology., ~640×360
+- favicon.png — 4KB, favicon
+- icon-apple-touch-icon-180x180.png — 4KB, icon apple touch icon 180x180
+- icon-icon-16x16-2.png — 0KB, icon icon 16x16 2
+- icon-icon-16x16.png — 0KB, icon icon 16x16
+- icon-icon-192x192-2.png — 4KB, icon icon 192x192 2
+- icon-icon-192x192.png — 4KB, icon icon 192x192
+- icon-icon-32x32-2.png — 1KB, icon icon 32x32 2
+- icon-icon-32x32.png — 1KB, icon icon 32x32
+- icon-shortcut-icon-unsized.ico — 33KB, icon shortcut icon unsized
+- journey-introduction-v5.jpg — 346KB, journey introduction v5
+- logo-d2d0b25a.svg — 7KB, logo d2d0b25a
+- logo-f6b5cd65.svg — 7KB, logo f6b5cd65
+- og-image.jpg — 37KB, og image
+- tile-grading-v2.jpg — 34KB, tile grading v2
+- tile-hypecard.jpg — 29KB, tile hypecard
+- tile-music.jpg — 16KB, tile music
+- tile-prvideo.jpg — 15KB, tile prvideo
+- tile-variables.jpg — 23KB, tile variables
+- svgs/logo-1ae5fa53.svg — logo 1ae5fa53
+- svgs/logo-2bcd00e8.svg — logo 2bcd00e8
+- svgs/logo-35e9a7ba.svg — logo 35e9a7ba
+- svgs/logo-45cc850d.svg — logo 45cc850d
+- svgs/logo-837b97fb.svg — logo 837b97fb
+- svgs/logo-c7a0fe52.svg — logo c7a0fe52
+- svgs/svg-265c757e.svg — svg 265c757e
+- svgs/svg-2a0f1ff5.svg — svg 2a0f1ff5
+- svgs/svg-41ee7330.svg — svg 41ee7330
+- svgs/svg-45cc850d-2.svg — svg 45cc850d 2
+- svgs/svg-45cc850d-3.svg — svg 45cc850d 3
+- svgs/svg-45cc850d-4.svg — svg 45cc850d 4
+- svgs/svg-45cc850d-5.svg — svg 45cc850d 5
+- svgs/svg-45cc850d-6.svg — svg 45cc850d 6
+- svgs/svg-45cc850d-7.svg — svg 45cc850d 7
+- svgs/svg-45cc850d.svg — svg 45cc850d
+- svgs/svg-60d89aeb.svg — svg 60d89aeb
+- svgs/svg-62d762a9.svg — svg 62d762a9
+- svgs/svg-63a4bf65.svg — svg 63a4bf65
+- svgs/svg-684191d2-2.svg — svg 684191d2 2
+- svgs/svg-684191d2.svg — svg 684191d2
+- svgs/svg-7fa67adc.svg — svg 7fa67adc
+- svgs/svg-837b97fb.svg — svg 837b97fb
+- svgs/svg-97c48b39.svg — svg 97c48b39
+- svgs/svg-9e9327f4.svg — svg 9e9327f4
+- svgs/svg-be15914a.svg — svg be15914a
+- svgs/svg-d8346405.svg — svg d8346405
+- svgs/svg-e3136d26.svg — svg e3136d26
+- svgs/svg-eab49bfc.svg — svg eab49bfc
+- svgs/svg-ef19b4c5.svg — svg ef19b4c5
+- fonts/LM-italic.ttf — font file
+- fonts/LM-italic.woff — font file
+- fonts/LM-italic.woff2 — font file
+- fonts/LM-regular.ttf — font file
+- fonts/LM-regular.woff — font file
+- fonts/LM-regular.woff2 — font file
+- fonts/PaperMono_Variable.p.aa32f7a0.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L0UUMbndwVgHU.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L1UUMbndwVgHU.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L2UUMbndwVgHU.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L3UUMbndwVgHU.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L6UUMbndwVgHU.woff2 — font file
+- fonts/UcC53FwrK3iLTcvneQg7Ca725JhhKnNqk6L9UUMbndwVgHU.woff2 — font file
+- fonts/cmuntt.woff — font file

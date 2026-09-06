@@ -1,26 +1,27 @@
 import { normalizeArticles, publicBlogUrl } from "../lib/discovery";
 import { timingSafeEqual } from "node:crypto";
 import { collectCandidates, feedFallback, shortlist } from "../lib/discovery-feeds";
-import { DAILY_HOUR_UTC, type Candidate } from "../lib/discovery-sources";
+import { slotOf, type Candidate } from "../lib/discovery-sources";
 import { completeDigestInDb } from "../lib/discovery-persistence";
 import { getDiscoveryRun, startDiscovery } from "../lib/tinyfish";
 
 type Schedule = { userId: string; topics: string; budget: number; sourceIds: string };
-type Pending = { id: string; userId: string; day: string; status: string; runId: string | null; candidates: string; budget: number; startedAt: string | number };
+type Pending = { id: string; userId: string; day: string; slot: number; status: string; runId: string | null; candidates: string; budget: number; startedAt: string | number };
 type SchedulerEnv = Pick<DiscoveryWorkerEnv, "DB" | "TINYFISH_API_KEY" | "CRON_SECRET">;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message.slice(0, 300) : "Scheduled discovery failed";
 
-async function exclusions(db: D1Database, userId: string, day: string): Promise<Set<string>> {
+async function exclusions(db: D1Database, userId: string, day: string, slot: number): Promise<Set<string>> {
   const [saved, seen] = await Promise.all([
     db.prepare("SELECT sourceUrl AS url FROM items WHERE userId = ? AND sourceUrl IS NOT NULL ORDER BY createdAt DESC LIMIT 200").bind(userId).all<{ url: string }>(),
-    db.prepare("SELECT a.url FROM discovery_articles a JOIN discovery_digests d ON a.digestId = d.id WHERE d.userId = ? AND d.day <> ? ORDER BY d.day DESC LIMIT 200").bind(userId, day).all<{ url: string }>(),
+    // Every other edition — including earlier slots today — so slots never repeat links.
+    db.prepare("SELECT a.url FROM discovery_articles a JOIN discovery_digests d ON a.digestId = d.id WHERE d.userId = ? AND NOT (d.day = ? AND d.slot = ?) ORDER BY d.day DESC, d.slot DESC LIMIT 200").bind(userId, day, slot).all<{ url: string }>(),
   ]);
   return new Set([...saved.results, ...seen.results].map((row) => publicBlogUrl(row.url)).filter((url): url is string => Boolean(url)));
 }
 
 async function finish(db: D1Database, digest: Pending, result: unknown, notice: string | null = null) {
   const candidates: Candidate[] = JSON.parse(digest.candidates);
-  const excluded = await exclusions(db, digest.userId, digest.day);
+  const excluded = await exclusions(db, digest.userId, digest.day, digest.slot);
   let articles: ReturnType<typeof normalizeArticles> = [];
   if (!notice) {
     try {
@@ -35,7 +36,7 @@ async function finish(db: D1Database, digest: Pending, result: unknown, notice: 
 }
 
 async function finalizePending(env: SchedulerEnv, now: Date) {
-  const pending = await env.DB.prepare("SELECT id, userId, day, status, runId, candidates, budget, startedAt FROM discovery_digests WHERE origin = 'scheduled' AND status IN ('starting', 'running') ORDER BY day LIMIT 10").all<Pending>();
+  const pending = await env.DB.prepare("SELECT id, userId, day, slot, status, runId, candidates, budget, startedAt FROM discovery_digests WHERE origin = 'scheduled' AND status IN ('starting', 'running') ORDER BY day, slot LIMIT 10").all<Pending>();
   for (const digest of pending.results) {
     const age = now.getTime() - new Date(digest.startedAt).getTime();
     if (digest.status === "starting") {
@@ -67,23 +68,23 @@ async function finalizePending(env: SchedulerEnv, now: Date) {
 
 export async function runScheduledDiscovery(env: SchedulerEnv, now = new Date()) {
   await finalizePending(env, now);
-  if (now.getUTCHours() < DAILY_HOUR_UTC) return;
-  const day = now.toISOString().slice(0, 10);
+  // No start-hour gate: editions run round the clock, one per 3-hour slot.
+  const { day, slot } = slotOf(now);
   const schedules = await env.DB.prepare(`SELECT userId, topics, budget, sourceIds FROM discovery_schedules s
-    WHERE enabled = 1 AND NOT EXISTS (SELECT 1 FROM discovery_digests d WHERE d.userId = s.userId AND d.day = ?)
-    ORDER BY userId LIMIT 10`).bind(day).all<Schedule>();
+    WHERE enabled = 1 AND NOT EXISTS (SELECT 1 FROM discovery_digests d WHERE d.userId = s.userId AND d.day = ? AND d.slot = ?)
+    ORDER BY userId LIMIT 10`).bind(day, slot).all<Schedule>();
   for (const schedule of schedules.results) {
     const id = crypto.randomUUID();
     // Atomic claim, shared unique index with manual /api/discover starts.
     const claim = await env.DB.prepare(`INSERT OR IGNORE INTO discovery_digests
-      (id, userId, day, topics, seeds, budget, status, attempts, startedAt, origin, candidates)
-      SELECT ?, userId, ?, topics, '[]', budget, 'starting', 1, ?, 'scheduled', '[]'
+      (id, userId, day, slot, topics, seeds, budget, status, attempts, startedAt, origin, candidates)
+      SELECT ?, userId, ?, ?, topics, '[]', budget, 'starting', 1, ?, 'scheduled', '[]'
       FROM discovery_schedules WHERE userId = ? AND enabled = 1`)
-      .bind(id, day, now.toISOString(), schedule.userId).run();
+      .bind(id, day, slot, now.toISOString(), schedule.userId).run();
     if (!claim.meta.changes) continue;
     let candidates: Candidate[] = [];
     try {
-      const excluded = await exclusions(env.DB, schedule.userId, day);
+      const excluded = await exclusions(env.DB, schedule.userId, day, slot);
       const collected = await collectCandidates(JSON.parse(schedule.sourceIds), now);
       candidates = shortlist(collected.candidates, excluded, schedule.topics, day);
       await env.DB.batch([
@@ -91,7 +92,7 @@ export async function runScheduledDiscovery(env: SchedulerEnv, now = new Date())
         env.DB.prepare("UPDATE discovery_schedules SET lastRunAt = ?, lastError = NULL, sourceHealth = ? WHERE userId = ?")
           .bind(now.toISOString(), JSON.stringify(collected.health), schedule.userId),
       ]);
-      const digest: Pending = { id, userId: schedule.userId, day, status: "running", runId: "feed-only", candidates: JSON.stringify(candidates), budget: schedule.budget, startedAt: now.getTime() };
+      const digest: Pending = { id, userId: schedule.userId, day, slot, status: "running", runId: "feed-only", candidates: JSON.stringify(candidates), budget: schedule.budget, startedAt: now.getTime() };
       if (!candidates.length || !env.TINYFISH_API_KEY) {
         await env.DB.prepare("UPDATE discovery_digests SET status = 'running', runId = 'feed-only' WHERE id = ? AND status = 'starting'").bind(id).run();
         const notice = candidates.length ? "Tinyfish is not configured. Showing publisher previews." : collected.health.every((source) => source.error) ? "All sources were unavailable today. The scheduler will try again tomorrow." : "No new unseen links were available from the selected sources today.";
@@ -105,7 +106,7 @@ export async function runScheduledDiscovery(env: SchedulerEnv, now = new Date())
       // Do not repeatedly launch paid runs. Preserve collected candidates and
       // finish a usable feed-only edition on this or the next cron tick.
       await env.DB.prepare("UPDATE discovery_digests SET status = 'running', runId = 'feed-only', candidates = ? WHERE id = ? AND status = 'starting'").bind(JSON.stringify(candidates), id).run();
-      await finish(env.DB, { id, userId: schedule.userId, day, status: "running", runId: "feed-only", candidates: JSON.stringify(candidates), budget: schedule.budget, startedAt: now.getTime() }, null, `Browser summaries unavailable: ${errorMessage(error)}. Showing publisher previews.`);
+      await finish(env.DB, { id, userId: schedule.userId, day, slot, status: "running", runId: "feed-only", candidates: JSON.stringify(candidates), budget: schedule.budget, startedAt: now.getTime() }, null, `Browser summaries unavailable: ${errorMessage(error)}. Showing publisher previews.`);
       console.error(JSON.stringify({ event: "scheduled_discovery_start_error", digestId: id, message: errorMessage(error) }));
     }
   }
