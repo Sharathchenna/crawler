@@ -98,7 +98,8 @@ Usage:
   hoard login <client> [--api-url URL]     Connect (paste a token from Settings → Tokens)
   hoard search "<query>" [--type x|repo|page|note]   Search notes + items
   hoard save <url>                         Capture a URL
-  hoard export [dir]                       Export everything as .md files
+  hoard export [dir]                       Export everything as .md files (qmd-ready: qmd collection add <dir> --name hoard)
+  hoard qmd [dir]                          Export + print the qmd sidecar setup (collection add, embed, query)
 `);
   process.exit(0);
 }
@@ -183,7 +184,7 @@ if (cmd === "save") {
   process.exit(0);
 }
 
-if (cmd === "export") {
+if (cmd === "export" || cmd === "qmd") {
   const { apiUrl, rest } = parseFlags(rawArgs);
   const cfg = await loadConfig();
   if (apiUrl) cfg.apiUrl = apiUrl;
@@ -220,6 +221,18 @@ if (cmd === "export") {
     count++;
   }
   console.log(`${count} files written to ${dir}/`);
+  if (cmd === "qmd") {
+    // qmd sidecar (https://github.com/tobi/qmd): index the export locally
+    // for BM25 + vector + reranked hybrid search over the same Markdown.
+    console.log([
+      "",
+      "Next — index with qmd:",
+      `  qmd collection add ${dir} --name hoard`,
+      "  qmd embed",
+      '  qmd query "your question"   # hybrid + rerank (best quality)',
+      '  qmd search "keywords"       # fast BM25-only',
+    ].join("\n"));
+  }
   process.exit(0);
 }
 

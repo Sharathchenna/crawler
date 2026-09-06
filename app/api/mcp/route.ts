@@ -10,7 +10,7 @@ const SERVER = { name: "hoard", version: "0.1.0" };
 const TOOLS = [
   {
     name: "search_items",
-    description: "Search saved items and notes (keyword + fuzzy + semantic). Returns Markdown-ready hits.",
+    description: "Hybrid search over saved items and notes (BM25 + semantic + fuzzy, RRF-fused qmd-style). Returns Markdown-ready hits.",
     inputSchema: {
       type: "object",
       properties: {

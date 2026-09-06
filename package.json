@@ -5,9 +5,11 @@
   "description": "Hoard — save anything as clean Markdown for humans and agents.",
   "type": "commonjs",
   "scripts": {
-    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
+    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
     "db:discovery": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql",
+    "db:qmd": "wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql",
     "test:discovery": "node --test tests/discovery.test.mjs",
+    "test:qmd": "node --test tests/qmd.test.mjs",
     "dev": "next dev",
     "build": "prisma generate && next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

@@ -5,10 +5,10 @@ A personal library that saves web pages, X threads, PDFs, images, audio, and You
 Runs on **Cloudflare Workers** (Next.js via OpenNext, Prisma + D1, auth with WebCrypto — no Node-only APIs).
 
 - Web app: auth, capture bar, Library, Inbox, Notes, Repos, Tweets, Articles, reader,
-  notes editor with revisions, search (keyword + fuzzy + semantic), settings/tokens.
+  notes editor with revisions, search (BM25 + semantic + fuzzy, RRF-fused), settings/tokens.
 - Backend: Next.js 15 route handlers + Prisma over **D1** (per-request clients, no global connection).
 - MCP server: `POST /api/mcp` (JSON-RPC 2.0 / streamable HTTP).
-- CLI: `hoard login|search|save|export` (points at any deployment via `--api-url`).
+- CLI: `hoard login|search|save|export|qmd` (points at any deployment via `--api-url`).
 - iOS: native SwiftUI + Share Extension, same API, same look.
 
 ## Quickstart (local)
@@ -42,7 +42,10 @@ wrangler d1 create hoard
 
 # 2. Migrate + seed production
 wrangler d1 execute hoard --remote --file=db/migrations/0001_init.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0002_discovery.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0003_qmd_fts.sql
 wrangler d1 execute hoard --remote --file=db/seed.sql
+# Existing DBs: 0002 and 0003 are additive — safe to apply on top.
 
 # 3. Secrets (dashboard works too; --keep-vars preserves them on deploy)
 # (no AUTH_SECRET anymore — sessions are gone; identity is the Access JWT)
@@ -151,15 +154,37 @@ doesn't block X or reproduce its conversations and social network.
 
 ## Search
 
-Three engines merge per query (each hit carries a `via` tag, additive):
+Hybrid search in the spirit of [qmd](https://github.com/tobi/qmd) (MIT):
+BM25 + semantic + fuzzy, fused with Reciprocal Rank Fusion. Each hit carries
+a `via` tag (`keyword` | `semantic` | `fuzzy`) naming its primary engine.
 
-1. **Keyword** — every term must appear (AND) across title/body/excerpt.
+1. **BM25** — D1 FTS5 (`items_fts` / `notes_fts`, porter unicode61, title
+   boosted 2x), kept in sync by triggers (`db/migrations/0003_qmd_fts.sql`).
+   Recall-oriented OR query with prefix match + CJK spacing, same ideas as
+   qmd's `searchLex`. Pre-0003 databases fall back to AND `LIKE` silently.
 2. **Semantic** — Workers AI embeddings (`bge-small`) + Vectorize, owner-scoped.
    Needs one-time setup (see below); absent → skipped silently.
 3. **Fuzzy** — typo-tolerant match on titles + excerpts (Fuse.js), capped extras.
 
+Fusion is RRF (`k=60`, original-query lists weighted 2x) with qmd's top-rank
+bonus (+0.05 rank 1, +0.02 ranks 2–3); snippets use best-window extraction
+around query terms. Core lives in `lib/qmd.ts` (pure TS, no native deps —
+full qmd needs better-sqlite3/sqlite-vec/node-llama-cpp + local files, so it
+can't run inside workerd).
+
 The `/search` page adds scope chips (All, Notes, Tweets, Repos, Articles)
 hitting the same `type` filter.
+
+### qmd sidecar interop (local)
+
+`hoard export` writes front-matter `.md` files that qmd can index directly:
+
+```bash
+hoard export ./hoard-export
+qmd collection add ./hoard-export --name hoard
+qmd embed
+qmd query "quarterly planning process"   # hybrid + rerank, best quality
+```
 
 ### Enabling semantic search
 
@@ -245,6 +270,7 @@ hoard login my-laptop --api-url https://hoard.<you>.workers.dev
 hoard search "markdown"
 hoard save https://example.com
 hoard export ./hoard-export        # front-matter .md files
+hoard qmd ./hoard-export           # export + qmd sidecar setup (collection add, embed, query)
 ```
 
 Config lives at `~/.hoard/config.json` (`{ apiUrl, token, client, cfAccessId?, cfAccessSecret? }`).
@@ -265,8 +291,8 @@ it tells you to run `login`. Network error → it prints the URL it tried and th
 Every query is owner-scoped by `userId`. Auth is Cloudflare Access JWTs (`lib/access.ts`: RS256 certs, AUD + expiry
 checked) mapped to local users, plus Hoard bearer tokens for machines
 (`lib/auth.ts`). Sessions/cookies are gone — sign out at
-`/cdn-cgi/access/logout`. Search is keyword today (D1 has no pgvector;
-Vectorize is the future seam).
+`/cdn-cgi/access/logout`. Search is hybrid BM25 (D1 FTS5) + Vectorize
+semantic + Fuse fuzzy, fused qmd-style with RRF.
 
 ## iOS
 
