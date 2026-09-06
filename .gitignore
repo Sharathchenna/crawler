@@ -15,3 +15,8 @@ prisma/dev.db*
 hoard-export/
 .env
 *.tsbuildinfo
+
+# Local agent/video workspace (other projects live here untracked)
+.agents/
+videos/
+skills-lock.json
