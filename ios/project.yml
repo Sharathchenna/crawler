@@ -1,0 +1,90 @@
+name: Hoard
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+
+packages:
+  KeepKit:
+    path: KeepKit
+
+targets:
+  Hoard:
+    type: application
+    platform: iOS
+    bundleId: com.hoard.app
+    sources:
+      - path: Hoard
+    dependencies:
+      - package: KeepKit
+    settings:
+      base:
+        PRODUCT_NAME: Hoard
+        PRODUCT_BUNDLE_IDENTIFIER: com.hoard.app
+        INFOPLIST_KEY_UIAppFonts: "Inter-Regular.ttf JetBrainsMono-Regular.ttf"
+      configs:
+        Debug:
+          HOARD_API_BASE_URL: "http://localhost:3000"
+        Release:
+          HOARD_API_BASE_URL: "https://crawler.sharathchenna.top"
+    entitlements:
+      path: Hoard/Hoard.entitlements
+      properties:
+        com.apple.security.application-groups: ["group.com.hoard.app"]
+        keychain-access-groups: ["$(AppIdentifierPrefix)group.com.hoard.app"]
+    info:
+      path: Hoard/Info.plist
+      properties:
+        UILaunchScreen: {}
+        HoardAPIBaseURL: "$(HOARD_API_BASE_URL)"
+        UIAppFonts: ["Inter-Regular.ttf", "JetBrainsMono-Regular.ttf"]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            localhost:
+              NSExceptionAllowsInsecureHTTPLoads: true
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: ["hoard"]
+
+  HoardShare:
+    type: app-extension
+    platform: iOS
+    bundleId: com.hoard.app.share
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hoard.app.share
+      configs:
+        Debug:
+          HOARD_API_BASE_URL: "http://localhost:3000"
+        Release:
+          HOARD_API_BASE_URL: "https://crawler.sharathchenna.top"
+    sources:
+      - path: Share
+    dependencies:
+      - package: KeepKit
+      - target: Hoard
+    entitlements:
+      path: Share/Share.entitlements
+      properties:
+        com.apple.security.application-groups: ["group.com.hoard.app"]
+        keychain-access-groups: ["$(AppIdentifierPrefix)group.com.hoard.app"]
+    info:
+      path: Share/Info.plist
+      properties:
+        HoardAPIBaseURL: "$(HOARD_API_BASE_URL)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: ShareViewController
+          NSExtensionActivationRule:
+            NSExtensionActivationSupportsWebURLWithMaxCount: 1
+            NSExtensionActivationSupportsText: true
+            NSExtensionActivationSupportsWebPageWithMaxCount: 1
+
+schemes:
+  Hoard:
+    build:
+      targets:
+        Hoard: all
+        HoardShare: all
+    run:
+      config: Debug

@@ -17,13 +17,16 @@ ios/
       Outbox.swift            App Group offline queue (JSON file)
   Hoard/                      SwiftUI app (MVVM, @Observable, async/await)
     HoardApp.swift            @main + SessionStore (token, flushOutbox)
-    ContentView.swift         tabs + ＋ quick capture
+    ContentView.swift         tabs (Library · Inbox · Discover · Notes · Search)
     AuthView.swift            token + Access service pair → Keychain
-    LibraryViews.swift        Library (tab 1) + Inbox (tab 2)
-    ItemReaderView.swift      Markdown + SFSafariViewController + Copy
+    LibraryViews.swift        Library + Inbox; Library has collection filters
+                              (All · Repos · Tweets · Articles → /api/items?type=…)
+    DiscoverView.swift        Discover — Tinyfish daily digest (setup form,
+                              running/poll, ready cards: save/read/skip)
+    ItemReaderView.swift      Markdown + SFSafariViewController + Copy + reprocess
     NotesViews.swift          Notes list + editor (preview toggle, revisions feed)
-    SearchSettingsViews.swift Search (.searchable, debounced) + Settings
-                              (plan, sign out, tokens + MCP picker)
+    SearchSettingsViews.swift Search (.searchable, debounced, type scopes) +
+                              Settings (sign out, tokens, MCP picker, reindex)
     Hoard.entitlements        App Group + Keychain group
   Share/
     ShareViewController.swift accepts URLs/text/PDFs-images (stretch),
@@ -53,7 +56,7 @@ cd ios && xcodegen generate && open Hoard.xcodeproj
 
 Option B: create a blank iOS App project in Xcode, drag in `Hoard/` + `KeepKit/` + `Share/`, set the bundle IDs / groups / `UIAppFonts` as in `project.yml`.
 
-- Set **HoardAPIBaseURL** to `http://localhost:3000` for dev (ATS exception for localhost is in `project.yml`; remove for release) or your prod URL.
+- **API base URL** is per-configuration in `project.yml` via `HOARD_API_BASE_URL`, substituted into `Info.plist`'s `HoardAPIBaseURL`: Debug → `http://localhost:3000`, Release → `https://crawler.sharathchenna.top` (the production Worker). `Config.swift` carries the same values as a compiled fallback. The ATS localhost exception in `project.yml` only affects Debug; Release talks HTTPS.
 - Bundle `Inter-Regular.ttf` + `JetBrainsMono-Regular.ttf` in the app target (referenced by `UIAppFonts` / `Font.inter` / `Font.mono`). Fonts are system-fallback-safe if missing.
 - Enable **App Groups** (`group.com.hoard.app`) + **Keychain Sharing** on both targets.
 
@@ -63,8 +66,16 @@ Option B: create a blank iOS App project in Xcode, drag in `Hoard/` + `KeepKit/`
    Create a service-token pair (Zero Trust → Access → Service Tokens) if the API
    sits behind Access. In the app, paste the Hoard token (+ Access ID/secret);
    it verifies with a light read before storing everything in the shared Keychain.
-2. Library/Inbox/Notes/Search mirror `/library`, `/inbox`, `/notes`, `/search`. ＋ captures a pasted URL via `POST /api/capture`.
-3. Settings → issue token, pick an MCP client, copy the same snippet the web builds.
+2. Library/Inbox/Discover/Notes/Search mirror `/library`, `/inbox`, `/discover`,
+   `/notes`, `/search`. Library's segmented control folds in the web's Repos /
+   Tweets / Articles section pages (`/api/items?type=repo|x|page,pdf`). Search's
+   scope buttons map to the same server `type` param. ＋ (Library/Inbox toolbar)
+   captures a pasted URL or text via `POST /api/capture`.
+3. Discover mirrors `/discover`: describe interests + up to 3 seed blogs +
+   a 10/20/30-min budget, then Tinyfish returns up to five daily reads to
+   save/read/skip. Needs `TINYFISH_API_KEY` on the server.
+4. Settings (gear, Library toolbar) → issue token, rebuild the semantic index
+   (`POST /api/reindex`), pick an MCP client, copy the same snippet the web builds.
 
 ## Test the Share Extension from Safari
 
