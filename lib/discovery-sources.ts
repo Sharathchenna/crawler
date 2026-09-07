@@ -16,6 +16,16 @@ export const DISCOVERY_SOURCES = [
   { id: "cloudflare", name: "Cloudflare Blog", category: "Systems & security", url: "https://blog.cloudflare.com/", feed: "https://blog.cloudflare.com/rss/", description: "Internet infrastructure, systems engineering and security." },
   { id: "krebs", name: "Krebs on Security", category: "Systems & security", url: "https://krebsonsecurity.com/", feed: "https://krebsonsecurity.com/feed/", description: "Original cybersecurity investigations and reporting." },
   { id: "schneier", name: "Schneier on Security", category: "Systems & security", url: "https://www.schneier.com/", feed: "https://www.schneier.com/feed/atom/", description: "Security analysis at the intersection of technology and people." },
+  { id: "huggingface", name: "Hugging Face", category: "AI & tools", url: "https://huggingface.co/blog", feed: "https://huggingface.co/blog/feed.xml", description: "Open-source models, datasets and ML tooling." },
+  { id: "marktechpost", name: "MarkTechPost", category: "AI & tools", url: "https://marktechpost.com/", feed: "https://marktechpost.com/feed/", description: "ML model and tool releases with a practical lens." },
+  { id: "gwern", name: "Gwern", category: "AI & tools", url: "https://gwern.net/", feed: "https://gwern.net/rss.xml", description: "Deep, infrequent essays on AI, statistics and safety." },
+  { id: "github", name: "GitHub Blog", category: "Engineering", url: "https://github.blog/", feed: "https://github.blog/feed/", description: "Developer tooling, platform changes and security advisories." },
+  { id: "codinghorror", name: "Coding Horror", category: "Engineering", url: "https://blog.codinghorror.com/", feed: "https://blog.codinghorror.com/rss/", description: "Jeff Atwood on software and programming culture." },
+  { id: "platformer", name: "Platformer", category: "Broad tech", url: "https://www.platformer.news/", feed: "https://www.platformer.news/feed", description: "Big tech, social platforms and power, by Casey Newton." },
+  { id: "404media", name: "404 Media", category: "Broad tech", url: "https://www.404media.co/", feed: "https://www.404media.co/rss/", description: "Independent investigations into internet culture and surveillance." },
+  { id: "mittr", name: "MIT Technology Review", category: "Broad tech", url: "https://www.technologyreview.com/", feed: "https://www.technologyreview.com/feed/", description: "Forward-looking computing and AI journalism." },
+  { id: "register", name: "The Register", category: "Broad tech", url: "https://www.theregister.com/", feed: "https://www.theregister.com/headlines.atom", description: "Enterprise IT and DevOps with a skeptical voice." },
+  { id: "bleeping", name: "BleepingComputer", category: "Systems & security", url: "https://www.bleepingcomputer.com/", feed: "https://www.bleepingcomputer.com/feed/", description: "Security operations and vulnerability tracking." },
 ] as const;
 
 export type SourceId = typeof DISCOVERY_SOURCES[number]["id"];
