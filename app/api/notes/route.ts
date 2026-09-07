@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     include: { revisions: true },
   });
   await indexDoc({
-    id: note.id, title: note.title, excerpt: note.markdown.slice(0, 280),
+    id: note.id, title: note.title, excerpt: note.markdown.slice(0, 280), body: note.markdown,
     userId: user.id, kind: "note", type: "note",
   });
   return NextResponse.json(note, { status: 201 });

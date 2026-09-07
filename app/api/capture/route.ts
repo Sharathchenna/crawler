@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       const item = await getDb().item.update({ where: { id: existing.id }, data });
       await attachTags(user.id, item.id, ex.tags);
       await indexDoc({
-        id: item.id, title: item.title, excerpt: item.excerpt,
+        id: item.id, title: item.title, excerpt: item.excerpt, body: ex.markdown,
         userId: user.id, kind: "item", type: item.type,
       });
       return NextResponse.json({ ...item, reprocessed: true });
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     const item = await getDb().item.create({ data: { ...data, userId: user.id, sourceUrl: url, status: "inbox" } });
     await attachTags(user.id, item.id, ex.tags);
     await indexDoc({
-      id: item.id, title: item.title, excerpt: item.excerpt,
+      id: item.id, title: item.title, excerpt: item.excerpt, body: ex.markdown,
       userId: user.id, kind: "item", type: item.type,
     });
     return NextResponse.json(item, { status: 201 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { indexDocs, isSemanticConfigured } from "@/lib/embeddings";
+import { indexDocs, isPostgres, isSemanticConfigured } from "@/lib/embeddings";
 
 // POST /api/reindex — (re)build this user's semantic index: embed every
 // item + note and upsert into Vectorize. Idempotent; bounded at 200 each,
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const [items, notes] = await Promise.all([
     getDb().item.findMany({
       where: { userId: user.id },
-      select: { id: true, title: true, excerpt: true, type: true },
+      select: { id: true, title: true, excerpt: true, markdown: true, type: true },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
@@ -38,6 +38,7 @@ export async function POST(req: Request) {
       id: it.id,
       title: it.title,
       excerpt: it.excerpt,
+      body: it.markdown,
       userId: user.id,
       kind: "item" as const,
       type: it.type,
@@ -46,19 +47,21 @@ export async function POST(req: Request) {
       id: n.id,
       title: n.title,
       excerpt: n.markdown.slice(0, 280),
+      body: n.markdown,
       userId: user.id,
       kind: "note" as const,
       type: "note",
     })),
   ];
   const indexed = await indexDocs(docs);
+  const backend = isPostgres() ? "pgvector" : "Vectorize";
   return NextResponse.json({
     indexed,
     total: docs.length,
     semantic: indexed > 0,
     message:
       indexed > 0
-        ? `Indexed ${indexed} of ${docs.length} documents for semantic search.`
-        : "Indexing failed — check the Vectorize index exists and the token has Vectorize + Workers AI permissions.",
+        ? `Indexed ${indexed} of ${docs.length} documents for semantic search (${backend}).`
+        : `Indexing failed — check the ${backend} index exists and the token has Vectorize + Workers AI permissions.`,
   });
 }

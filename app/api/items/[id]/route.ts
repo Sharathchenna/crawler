@@ -43,7 +43,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     },
   });
   await indexDoc({
-    id: updated.id, title: updated.title, excerpt: updated.excerpt,
+    id: updated.id, title: updated.title, excerpt: updated.excerpt, body: updated.markdown,
     userId: user.id, kind: "item", type: updated.type,
   });
   return NextResponse.json(updated);

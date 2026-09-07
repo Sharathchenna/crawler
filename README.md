@@ -247,6 +247,11 @@ npx wrangler vectorize create hoard-embeddings --dimensions=384 --metric=cosine
 # 3. Backfill: Settings → Rebuild index (or POST /api/reindex)
 ```
 
+On Docker/VPS the same bge-small vectors live in pgvector instead
+(`item_embeddings`, created at boot) — no Vectorize index needed, just the
+two Cloudflare vars for the embedding call. Chunked qmd-style, so long
+documents match on content.
+
 New saves index automatically; deletes unindex. Without credentials the
 whole layer is inert — keyword + fuzzy carry on, `/api/reindex` says so.
 

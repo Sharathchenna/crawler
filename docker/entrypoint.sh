@@ -23,6 +23,9 @@ const { Client } = require('pg');
 echo "[entry] pushing schema..."
 npx prisma db push --schema prisma/schema.docker.prisma --accept-data-loss --skip-generate
 
+echo "[entry] ensuring pgvector table..."
+node docker/ensure-pgvector.mjs
+
 if [ "$INIT_SEED" = "1" ]; then
   echo "[entry] seeding demo data..."
   node docker/seed.mjs || echo "[entry] seed already applied (or failed) — continuing"

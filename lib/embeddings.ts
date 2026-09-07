@@ -28,6 +28,16 @@ export function isSemanticConfigured(): boolean {
   return config() !== null;
 }
 
+/** Postgres deployments (Docker/VPS) store vectors in pgvector instead of
+ * Vectorize. Dynamic import keeps the Workers bundle free of PG code. */
+export function isPostgres(): boolean {
+  return (process.env.DATABASE_URL ?? "").startsWith("postgres");
+}
+
+async function pgBackend() {
+  return import("./embeddings-pg");
+}
+
 function api(path: string, cfg: CfConfig, init: RequestInit, timeoutMs: number) {
   return fetch(`https://api.cloudflare.com/client/v4/accounts/${cfg.accountId}${path}`, {
     ...init,
@@ -43,7 +53,7 @@ export function embeddingText(title: string, excerpt: string): string {
   return `${title ?? ""}\n${excerpt ?? ""}`.slice(0, 1500);
 }
 
-async function embedMany(texts: string[]): Promise<(number[] | null)[]> {
+export async function embedMany(texts: string[]): Promise<(number[] | null)[]> {
   const cfg = config();
   const empty = texts.map(() => null);
   if (!cfg || !texts.length) return empty;
@@ -104,7 +114,7 @@ export async function embedText(text: string): Promise<number[] | null> {
   return rows[0] ?? null;
 }
 
-type DocMeta = { id: string; title: string; excerpt: string; userId: string; kind: "item" | "note"; type: string };
+type DocMeta = { id: string; title: string; excerpt: string; userId: string; kind: "item" | "note"; type: string; body?: string };
 
 function ndjson(docs: DocMeta[], vectors: (number[] | null)[]): string {
   const lines: string[] = [];
@@ -147,6 +157,10 @@ async function upsertNdjson(ndjsonBody: string): Promise<boolean> {
 
 export async function indexDocs(docs: DocMeta[]): Promise<number> {
   if (!config() || !docs.length) return 0;
+  if (isPostgres()) {
+    // Chunked pgvector rows (with full bodies when provided).
+    return (await pgBackend()).pgIndexDocs(docs);
+  }
   let indexed = 0;
   // Bounded batches: keep each invocation well under subrequest limits.
   for (let i = 0; i < docs.length; i += 25) {
@@ -164,6 +178,10 @@ export async function indexDoc(doc: DocMeta): Promise<boolean> {
 }
 
 export async function unindexDoc(id: string): Promise<void> {
+  if (isPostgres()) {
+    await (await pgBackend()).pgUnindexDoc(id);
+    return;
+  }
   const cfg = config();
   if (!cfg || !id) return;
   try {
@@ -184,9 +202,13 @@ export async function unindexDoc(id: string): Promise<void> {
 
 /** Nearest-neighbour ids for this user (ordered by similarity). */
 export async function semanticIds(q: string, userId: string, topK = 30): Promise<string[]> {
-  const cfg = config();
   const query = (q ?? "").trim();
-  if (!cfg || !userId || !query) return [];
+  if (!userId || !query) return [];
+  if (isPostgres()) {
+    return (await pgBackend()).pgSemanticIds(query, userId, topK).catch(() => [] as string[]);
+  }
+  const cfg = config();
+  if (!cfg) return [];
   try {
     const values = await embedText(query);
     if (!values) return [];

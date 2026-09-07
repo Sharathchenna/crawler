@@ -10,8 +10,11 @@ serves origin traffic.
   Keyword search uses the LIKE fallback (no FTS tables on Postgres);
   semantic search keeps working over the Cloudflare REST APIs.
 - `scheduler` — the 5-minute discovery loop, ported to Postgres (`docker/scheduler/`).
-- `db` — `pgvector/pgvector:pg16` (pgvector preinstalled for a future
-  local-embeddings upgrade; unused by the app today).
+- `db` — `pgvector/pgvector:pg16`. pgvector is **used**: chunked bge-small
+  embeddings live in `item_embeddings` (created at boot by
+  `docker/ensure-pgvector.mjs`), replacing Vectorize on this backend.
+  Same embedding model, same RRF fusion — plus full-document chunking
+  qmd-style, so long papers match on content, not just excerpts.
 - `nginx` — terminates TLS with your Cloudflare Origin CA cert, proxies to `app`.
 
 ## First deploy
