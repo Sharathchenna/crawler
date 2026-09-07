@@ -106,14 +106,18 @@ public final class APIClient: Sendable {
   // MARK: - Items
 
   /// `type` is a comma-separated list matched against `Item.type`
-  /// (e.g. "repo", "x", "page,pdf") — mirrors the web section pages.
-  public func items(status: String? = nil, type: String? = nil) async throws -> [HoardItem] {
+  /// (e.g. "repo", "x", "page,pdf"); `source` is a named collection
+  /// (e.g. "arxiv") — both mirror the web section pages.
+  public func items(status: String? = nil, type: String? = nil, source: String? = nil) async throws -> [HoardItem] {
     var query: [String] = []
     if let status, !status.isEmpty { query.append("status=\(status)") }
-    if let type, !type.isEmpty {
-      let encoded = type.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? type
-      query.append("type=\(encoded)")
+    func add(_ key: String, _ value: String?) {
+      guard let value, !value.isEmpty else { return }
+      let encoded = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+      query.append("\(key)=\(encoded)")
     }
+    add("type", type)
+    add("source", source)
     let path = query.isEmpty ? "/api/items" : "/api/items?\(query.joined(separator: "&"))"
     return try await request(path)
   }
@@ -213,8 +217,11 @@ public final class APIClient: Sendable {
 
   // MARK: - Discover
 
-  public func discovery() async throws -> DiscoveryResponse {
-    try await request("/api/discover")
+  /// Latest edition when `day`/`slot` are nil; otherwise a pinned edition.
+  public func discovery(day: String? = nil, slot: Int? = nil) async throws -> DiscoveryResponse {
+    var path = "/api/discover"
+    if let day, let slot { path += "?day=\(day)&slot=\(slot)" }
+    return try await request(path)
   }
 
   public func startDiscovery(topics: String, seeds: [String], budget: Int) async throws -> DiscoveryResponse {
@@ -225,6 +232,37 @@ public final class APIClient: Sendable {
 
   public func updateDiscoveryArticle(id: String, status: String) async throws -> DiscoveryResponse {
     try await request("/api/discover", method: "PATCH", body: ["id": id, "status": status])
+  }
+
+  /// Lazily resolve a lead image for an article that arrived without one.
+  public func discoverOgImage(url: String) async throws -> String? {
+    struct Out: Decodable { var imageUrl: String? }
+    let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url
+    let out: Out = try await request("/api/discover/og?url=\(encoded)")
+    let value = out.imageUrl ?? ""
+    return value.isEmpty ? nil : value
+  }
+
+  /// Enable/disable automatic 3-hourly editions and set the source collection.
+  public func saveDiscoverySchedule(enabled: Bool, topics: String, budget: Int, sourceIds: [String]) async throws -> DiscoveryResponse {
+    struct Body: Encodable { let enabled: Bool; let topics: String; let budget: Int; let sourceIds: [String] }
+    return try await request("/api/discover", method: "PUT",
+                             body: Body(enabled: enabled, topics: topics, budget: budget, sourceIds: sourceIds))
+  }
+
+  // MARK: - Highlights
+
+  public func highlights(itemId: String) async throws -> [HoardHighlight] {
+    try await request("/api/items/\(itemId)/highlights")
+  }
+
+  public func addHighlight(itemId: String, quote: String, note: String) async throws -> HoardHighlight {
+    try await request("/api/items/\(itemId)/highlights", method: "POST", body: ["quote": quote, "note": note])
+  }
+
+  public func deleteHighlight(itemId: String, highlightId: String) async throws {
+    struct Ok: Decodable { var ok: Bool? }
+    let _: Ok = try await request("/api/items/\(itemId)/highlights/\(highlightId)", method: "DELETE")
   }
 
   public func issueToken() async throws -> String {

@@ -16,6 +16,8 @@ struct ItemReaderView: View {
   @State private var stage = 0
   @State private var reMsg: String?
   @State private var actionError: String?
+  @State private var highlights: [HoardHighlight] = []
+  @State private var showAddHighlight = false
 
   enum ReaderView: String, CaseIterable { case reader = "Reader"; case original = "Original" }
 
@@ -97,6 +99,8 @@ struct ItemReaderView: View {
               ErrorBanner(actionError)
             }
 
+            highlightsPanel
+
             if view == .original, let s = loaded.sourceUrl {
               VStack(alignment: .leading, spacing: 8) {
                 if loaded.extractionError != nil {
@@ -142,6 +146,55 @@ struct ItemReaderView: View {
         SafariView(url: u)
       }
     }
+    .sheet(isPresented: $showAddHighlight) {
+      AddHighlightSheet { quote, note in
+        await addHighlight(quote: quote, note: note)
+      }
+      .presentationDetents([.medium])
+    }
+  }
+
+  @ViewBuilder
+  private var highlightsPanel: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack {
+        Text("HIGHLIGHTS").font(.mono(10)).tracking(1).foregroundStyle(HoardTheme.faint)
+        Spacer()
+        Button { showAddHighlight = true } label: {
+          Label("Add", systemImage: "plus").font(.mono(11))
+        }
+        .tint(HoardTheme.accentHi)
+      }
+      if highlights.isEmpty {
+        Text("Save a quote worth keeping.").font(.inter(12)).foregroundStyle(HoardTheme.faint)
+      } else {
+        ForEach(highlights) { h in
+          VStack(alignment: .leading, spacing: 4) {
+            Text(h.quote).font(.inter(13)).foregroundStyle(HoardTheme.textBody)
+              .padding(.leading, 8)
+              .overlay(alignment: .leading) {
+                Rectangle().fill(HoardTheme.accentHi).frame(width: 2)
+              }
+            if let note = h.note, !note.isEmpty {
+              Text(note).font(.inter(12)).foregroundStyle(HoardTheme.muted).padding(.leading, 8)
+            }
+            HStack {
+              Spacer()
+              Button(role: .destructive) { Task { await deleteHighlight(h.id) } } label: {
+                Image(systemName: "trash").font(.system(size: 11))
+              }
+              .tint(HoardTheme.red)
+            }
+          }
+          .padding(10)
+          .background(HoardTheme.hover)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+      }
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .overlay(RoundedRectangle(cornerRadius: HoardTheme.radiusCard).stroke(HoardTheme.borderSoft, lineWidth: 1))
   }
 
   private var reproStages: [String] { ["Fetching", "Extracting", "Converting"] }
@@ -164,8 +217,27 @@ struct ItemReaderView: View {
       let fetched = try await session.client.item(id: itemID)
       item = fetched
       if fetched.extractionError != nil { view = .original }
+      highlights = (try? await session.client.highlights(itemId: itemID)) ?? []
     } catch {
       loadError = error.localizedDescription
+    }
+  }
+
+  private func addHighlight(quote: String, note: String) async {
+    do {
+      let h = try await session.client.addHighlight(itemId: itemID, quote: quote, note: note)
+      highlights.append(h)
+    } catch {
+      actionError = error.localizedDescription
+    }
+  }
+
+  private func deleteHighlight(_ id: String) async {
+    do {
+      try await session.client.deleteHighlight(itemId: itemID, highlightId: id)
+      highlights.removeAll { $0.id == id }
+    } catch {
+      actionError = error.localizedDescription
     }
   }
 
@@ -213,4 +285,51 @@ struct SafariView: UIViewControllerRepresentable {
   var url: URL
   func makeUIViewController(context: Context) -> SFSafariViewController { SFSafariViewController(url: url) }
   func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
+
+/// Add a highlight: a quote (required) plus an optional note.
+struct AddHighlightSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  var onSave: (String, String) async -> Void
+
+  @State private var quote = ""
+  @State private var note = ""
+  @State private var saving = false
+
+  var body: some View {
+    NavigationStack {
+      VStack(alignment: .leading, spacing: 12) {
+        Text("Quote").font(.mono(11)).foregroundStyle(HoardTheme.faint)
+        TextEditor(text: $quote)
+          .font(.inter(14)).frame(minHeight: 100).scrollContentBackground(.hidden)
+          .padding(8).background(HoardTheme.hover)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .overlay(RoundedRectangle(cornerRadius: 8).stroke(HoardTheme.border, lineWidth: 1))
+        Text("Note (optional)").font(.mono(11)).foregroundStyle(HoardTheme.faint)
+        TextField("Why it matters", text: $note)
+          .font(.inter(14)).padding(10).background(HoardTheme.hover)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .overlay(RoundedRectangle(cornerRadius: 8).stroke(HoardTheme.border, lineWidth: 1))
+        Spacer()
+      }
+      .padding()
+      .background(HoardTheme.canvas)
+      .navigationTitle("Add highlight")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(saving ? "Saving…" : "Save") {
+            Task {
+              saving = true
+              await onSave(quote.trimmingCharacters(in: .whitespacesAndNewlines), note.trimmingCharacters(in: .whitespacesAndNewlines))
+              saving = false
+              dismiss()
+            }
+          }
+          .disabled(saving || quote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+      }
+    }
+  }
 }

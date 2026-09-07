@@ -19,11 +19,13 @@ ios/
     HoardApp.swift            @main + SessionStore (token, flushOutbox)
     ContentView.swift         tabs (Library · Inbox · Discover · Notes · Search)
     AuthView.swift            token + Access service pair → Keychain
-    LibraryViews.swift        Library + Inbox; Library has collection filters
-                              (All · Repos · Tweets · Articles → /api/items?type=…)
-    DiscoverView.swift        Discover — Tinyfish daily digest (setup form,
-                              running/poll, ready cards: save/read/skip)
-    ItemReaderView.swift      Markdown + SFSafariViewController + Copy + reprocess
+    LibraryViews.swift        Library + Inbox; Library collection filters
+                              (All · Repos · Tweets · Articles · Papers →
+                              /api/items?type=… / ?source=arxiv)
+    DiscoverView.swift        Discover — 3-hourly editions (slots 0–7), editions
+                              history picker, per-article thumbnails, auto-schedule
+                              (enable + source collection), save/read/skip
+    ItemReaderView.swift      Markdown + Safari + Copy + reprocess + highlights
     NotesViews.swift          Notes list + editor (preview toggle, revisions feed)
     SearchSettingsViews.swift Search (.searchable, debounced, type scopes) +
                               Settings (sign out, tokens, MCP picker, reindex)

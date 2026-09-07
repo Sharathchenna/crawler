@@ -48,16 +48,19 @@ struct ItemRow: View {
 /// The Library's type collections — mirrors the web Repos / Tweets / Articles
 /// section pages, which are just `GET /api/items?type=…` filters.
 enum ItemCollection: String, CaseIterable, Identifiable {
-  case all = "All", repos = "Repos", tweets = "Tweets", articles = "Articles"
+  case all = "All", repos = "Repos", tweets = "Tweets", articles = "Articles", papers = "Papers"
   var id: String { rawValue }
+  /// Matched against `Item.type` (web `?type=`).
   var typeParam: String? {
     switch self {
-    case .all: return nil
     case .repos: return "repo"
     case .tweets: return "x"
     case .articles: return "page,pdf"
+    default: return nil
     }
   }
+  /// Named source collection (web `?source=`) — Papers = arXiv/ar5iv.
+  var sourceParam: String? { self == .papers ? "arxiv" : nil }
 }
 
 @Observable
@@ -175,11 +178,12 @@ struct ItemListContent: View {
   func load() async {
     model.loading = true; model.errorMessage = nil
     let type = showCollections ? model.collection.typeParam : nil
+    let source = showCollections ? model.collection.sourceParam : nil
     do {
       if let statusParam {
-        model.items = try await session.client.items(status: statusParam, type: type)
+        model.items = try await session.client.items(status: statusParam, type: type, source: source)
       } else {
-        let all = try await session.client.items(type: type)
+        let all = try await session.client.items(type: type, source: source)
         model.items = all.filter { $0.status != "archived" }
       }
     } catch {

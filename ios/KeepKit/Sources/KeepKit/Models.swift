@@ -102,6 +102,15 @@ public struct HoardTag: Codable, Identifiable, Hashable {
   public var name: String
 }
 
+/// A saved quote from an item (reader highlights).
+public struct HoardHighlight: Codable, Identifiable, Hashable {
+  public var id: String
+  public var itemId: String?
+  public var quote: String
+  public var note: String?
+  public var createdAt: Date
+}
+
 public struct AgentTokenRow: Codable, Identifiable, Hashable {
   public var id: String
   public var client: String
@@ -115,7 +124,7 @@ public struct ErrorPayload: Codable {
 
 // MARK: - Discover (Tinyfish daily reading digest)
 
-/// One article in a daily edition. `status`: unread | read | skipped | saved.
+/// One article in an edition. `status`: unread | read | skipped | saved.
 public struct DiscoveryArticle: Codable, Identifiable, Hashable {
   public var id: String
   public var url: String
@@ -126,33 +135,41 @@ public struct DiscoveryArticle: Codable, Identifiable, Hashable {
   public var minutes: Int
   public var status: String
   public var itemId: String?
+  public var imageUrl: String?   // lead image (feed enclosure / og:image), "" when absent
 
+  public var image: String { imageUrl ?? "" }
   public var domain: String {
     guard let u = URL(string: url) else { return "" }
     return u.host?.replacingOccurrences(of: "^www\\.", with: "", options: .regularExpression) ?? ""
   }
 }
 
-/// A day's edition. `status`: starting | running | ready | failed.
+/// A 3-hour-slot edition. `status`: starting | running | ready | failed.
+/// `origin`: "manual" | "scheduled".
 public struct DiscoveryDigest: Codable, Identifiable, Hashable {
   public var id: String
   public var day: String
+  public var slot: Int?
   public var topics: String
   public var seeds: String      // JSON-encoded [String]
   public var budget: Int
   public var status: String
   public var attempts: Int
   public var error: String?
+  public var origin: String?
   public var articles: [DiscoveryArticle]
 
+  public var slotValue: Int { slot ?? 0 }
+  public var isScheduled: Bool { origin == "scheduled" }
   public var isRunning: Bool { status == "starting" || status == "running" }
   public var isReady: Bool { status == "ready" }
   public var isFailed: Bool { status == "failed" }
   public var remaining: [DiscoveryArticle] { articles.filter { $0.status == "unread" } }
   public var finished: [DiscoveryArticle] { articles.filter { $0.status != "unread" } }
   public var minutesLeft: Int { remaining.reduce(0) { $0 + $1.minutes } }
-  /// A ready failed digest gets at most one explicit retry (attempts < 2).
-  public var canRetry: Bool { isFailed && attempts < 2 }
+  /// A failed digest gets at most one explicit retry (attempts < 2), never for scheduled runs.
+  public var canRetry: Bool { isFailed && attempts < 2 && !isScheduled }
+  public var editionLabel: String { DiscoverySources.slotLabel(day: day, slot: slotValue) }
 }
 
 /// Remembered inputs from the most recent edition, to prefill the form.
@@ -162,16 +179,43 @@ public struct DiscoveryPreferences: Codable, Hashable {
   public var budget: Int
 }
 
+/// One entry in the editions history picker.
+public struct DiscoveryEdition: Codable, Hashable, Identifiable {
+  public var day: String
+  public var slot: Int
+  public var status: String
+  public var id: String { "\(day)|\(slot)" }
+  public var label: String { DiscoverySources.slotLabel(day: day, slot: slot) }
+}
+
+public struct DiscoverySourceHealth: Codable, Hashable, Identifiable {
+  public var id: String
+  public var count: Int
+  public var error: String?
+}
+
+/// The user's automatic-discovery schedule (fresh edition every 3 hours).
+public struct DiscoverySchedule: Codable, Hashable {
+  public var enabled: Bool
+  public var topics: String
+  public var budget: Int
+  public var sourceIds: [String]
+  public var nextRunAt: String?
+  public var lastRunAt: String?
+  public var lastError: String?
+  public var sourceHealth: [DiscoverySourceHealth]?
+}
+
 public struct DiscoveryResponse: Codable {
   public var configured: Bool
   public var preferences: DiscoveryPreferences?
   public var digest: DiscoveryDigest?
+  public var editionDay: String?
+  public var editionSlot: Int?
+  public var editions: [DiscoveryEdition]?
+  public var schedule: DiscoverySchedule?
 
-  /// The form is offered when there is no edition yet, or a failed one can retry.
-  public var canStart: Bool {
-    guard let digest else { return true }
-    return digest.canRetry
-  }
+  public var editionList: [DiscoveryEdition] { editions ?? [] }
 }
 
 /// Lenient date parsing: Prisma emits ISO-8601 with fractional seconds
