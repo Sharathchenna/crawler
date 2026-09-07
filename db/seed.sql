@@ -2,14 +2,14 @@
 -- Apply AFTER db/migrations/0001_init.sql. Safe to run once (fixed ids).
 -- Password is PBKDF2-HMAC-SHA256 ($pbkdf2$ format, see lib/auth.ts).
 
-INSERT INTO users (id, email, password, plan, createdAt) VALUES
+INSERT INTO "users" ("id", "email", "password", "plan", "createdAt") VALUES
 ('seed-user-demo', 'demo@hoard.local', 'managed-by-access', 'personal', '2026-09-05T12:00:00.000Z');
 
-INSERT INTO tags (id, userId, name) VALUES
+INSERT INTO "tags" ("id", "userId", "name") VALUES
 ('seed-tag-reading', 'seed-user-demo', 'reading'),
 ('seed-tag-ideas', 'seed-user-demo', 'ideas');
 
-INSERT INTO items (id, userId, type, title, sourceUrl, markdown, excerpt, status, createdAt) VALUES
+INSERT INTO "items" ("id", "userId", "type", "title", "sourceUrl", "markdown", "excerpt", "status", "createdAt") VALUES
 ('seed-item-memory', 'seed-user-demo', 'page', 'The design of everyday memory', 'https://example.com/everyday-memory', '# The design of everyday memory
 
 [Original](https://example.com/everyday-memory)
@@ -43,7 +43,7 @@ Key idea: saving is cheap, refinding is the product.', 'Saving is cheap, refindi
 
 If an agent can read it and write it, it is an interface. Markdown is the interface.', 'If an agent can read it and write it, it is an interface.', 'inbox', '2026-09-05T12:00:00.000Z');
 
-INSERT INTO item_tags (itemId, tagId) VALUES
+INSERT INTO "item_tags" ("itemId", "tagId") VALUES
 ('seed-item-memory', 'seed-tag-reading'),
 ('seed-item-models', 'seed-tag-ideas'),
 ('seed-item-methods', 'seed-tag-reading'),
@@ -51,7 +51,7 @@ INSERT INTO item_tags (itemId, tagId) VALUES
 ('seed-item-markdown', 'seed-tag-reading'),
 ('seed-item-markdown', 'seed-tag-ideas');
 
-INSERT INTO notes (id, userId, title, markdown, project, kind, createdAt, updatedAt) VALUES
+INSERT INTO "notes" ("id", "userId", "title", "markdown", "project", "kind", "createdAt", "updatedAt") VALUES
 ('seed-note-launch', 'seed-user-demo', 'Hoard launch notes', '# Hoard launch notes
 
 ## v3
@@ -66,7 +66,7 @@ Added revisions. Every save keeps history.
 
 Capture works. Library lists everything.', 'hoard', 'project', '2026-09-05T12:00:00.000Z', '2026-09-05T12:00:00.000Z');
 
-INSERT INTO note_revisions (id, noteId, version, author, summary, markdown, createdAt) VALUES
+INSERT INTO "note_revisions" ("id", "noteId", "version", "author", "summary", "markdown", "createdAt") VALUES
 ('seed-rev-1', 'seed-note-launch', 1, 'You', 'First capture notes', '# Hoard launch notes
 
 Capture works. Library lists everything.', '2026-09-05T12:00:00.000Z'),
@@ -77,5 +77,5 @@ Added revisions. Every save keeps history.', '2026-09-05T12:00:00.000Z'),
 
 Ship MCP + CLI + Share Extension. Web reader is clean.', '2026-09-05T12:00:00.000Z');
 
-INSERT INTO note_sources (noteId, itemId) VALUES
+INSERT INTO "note_sources" ("noteId", "itemId") VALUES
 ('seed-note-launch', 'seed-item-memory');

@@ -25,4 +25,8 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-initOpenNextCloudflareForDev();
+// Dev-only bindings shim for `next dev`. Skipped in production servers
+// (Docker `next start` uses a real Postgres DATABASE_URL instead).
+if (process.env.NODE_ENV !== "production") {
+  initOpenNextCloudflareForDev();
+}

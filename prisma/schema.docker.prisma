@@ -1,0 +1,213 @@
+// Prisma schema for Hoard.
+// To switch to PostgreSQL (for pgvector semantic search):
+//   1. change provider to "postgresql"
+//   2. set DATABASE_URL to your postgres URL
+// That is the intended one-line change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  password  String
+  plan      String      @default("starter")
+  createdAt DateTime    @default(now())
+  items     Item[]
+  tags      Tag[]
+  notes     Note[]
+  sources   Source[]
+  tokens    AgentToken[]
+  digests   DiscoveryDigest[]
+  discoverySchedule DiscoverySchedule?
+
+  @@map("users")
+}
+
+model Item {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("page") // page|pdf|note|x|video|audio|file
+  title     String
+  sourceUrl String?
+  markdown  String   @default("")
+  excerpt   String   @default("")
+  status    String   @default("inbox") // inbox|saved|archived|done
+  // Rendered reader HTML, cached at first view (or reprocess) so repeat
+  // visits skip Shiki entirely. Empty = render on demand. Cleared whenever
+  // the Markdown changes.
+  html      String   @default("")
+  // Reader pipeline metadata (Defuddle extraction)
+  author          String?
+  publishedAt     DateTime?
+  extractedAt     DateTime?
+  extractionError String?
+  createdAt DateTime @default(now())
+  tags      ItemTag[]
+  highlights Highlight[]
+  noteLinks NoteSource[]
+
+  @@index([userId, status])
+  @@index([userId, sourceUrl])
+  @@map("items")
+}
+
+model Tag {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  items  ItemTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@map("item_tags")
+}
+
+model Highlight {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quote     String
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@map("highlights")
+}
+
+model Note {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  markdown  String         @default("")
+  project   String         @default("")
+  kind      String         @default("note")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  revisions NoteRevision[]
+  sources   NoteSource[]
+
+  @@index([userId])
+  @@map("notes")
+}
+
+model NoteRevision {
+  id        String   @id @default(cuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  version   Int
+  author    String   @default("You")
+  summary   String   @default("")
+  markdown  String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([noteId, version])
+  @@map("note_revisions")
+}
+
+model NoteSource {
+  noteId String
+  itemId String
+  note   Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, itemId])
+  @@map("note_sources")
+}
+
+model Source {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind          String    // feed|youtube|github|email
+  url           String
+  title         String    @default("")
+  lastCheckedAt DateTime?
+
+  @@map("sources")
+}
+
+model AgentToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String    @unique
+  client     String    @default("cli")
+  scopes     String    @default("read,write")
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@map("agent_tokens")
+}
+
+model DiscoveryDigest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day          String   // UTC date of the slot start
+  slot         Int      @default(0) // 3-hour slot index within the UTC day (0-7)
+  topics       String
+  seeds        String   @default("[]")
+  budget       Int      @default(20)
+  status       String   @default("starting") // starting|running|ready|failed
+  attempts     Int      @default(1)
+  runId        String?
+  error        String?
+  startedAt    DateTime @default(now())
+  lastPolledAt DateTime?
+  origin       String   @default("manual")
+  candidates   String   @default("[]")
+  articles     DiscoveryArticle[]
+
+  @@unique([userId, day, slot])
+  @@map("discovery_digests")
+}
+
+model DiscoveryArticle {
+  id          String @id @default(cuid())
+  digestId    String
+  digest      DiscoveryDigest @relation(fields: [digestId], references: [id], onDelete: Cascade)
+  url         String
+  title       String
+  author      String
+  summary     String
+  reason      String
+  minutes     Int
+  position    Int
+  status      String @default("unread") // unread|read|skipped|saved
+  imageUrl    String @default("")
+
+  @@unique([digestId, url])
+  @@map("discovery_articles")
+}
+
+model DiscoverySchedule {
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled      Boolean  @default(false)
+  topics       String
+  budget       Int      @default(30)
+  sourceIds    String
+  lastRunAt    DateTime?
+  lastError    String?
+  sourceHealth String   @default("[]")
+
+  @@map("discovery_schedules")
+}

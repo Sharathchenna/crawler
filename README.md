@@ -31,6 +31,13 @@ To preview the real Workers runtime locally (workerd, same as production):
 npm run preview           # builds + serves on http://localhost:8787
 ```
 
+## Self-host on a VPS (alternative)
+
+Prefer a plain server over Workers? See [`docker/`](docker/README.md):
+Compose stack (Next.js + Postgres/pgvector + scheduler + nginx), Cloudflare
+Origin CA for TLS, Access still works in front. No CPU-per-request limits;
+keyword search uses the LIKE fallback until Postgres FTS lands.
+
 ## Deploy to Cloudflare Workers
 
 Prereqs: a Cloudflare account + `wrangler login`.

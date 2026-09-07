@@ -1,0 +1,18 @@
+node_modules
+.next
+.open-next
+.git
+.gitignore
+.wrangler
+.dev.vars
+.env
+dev.db*
+*.db-journal
+hoard-export/
+docker/certs/*.pem
+docker/certs/*.key
+docker/.env
+.opencode
+# Other projects co-located in this directory (untracked, gitignored)
+.agents
+videos
