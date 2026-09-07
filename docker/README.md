@@ -107,6 +107,29 @@ tar czf /backup/pgdata-$(date +%F).tgz /data`. Test restores occasionally.
 every boot, so model changes land automatically (data-preserving for
 additive changes).
 
+## Continuous deployment (main branch)
+
+Pushes to `main` run `.github/workflows/deploy.yml`:
+
+1. Build and push `ghcr.io/sharathchenna/hoard:latest` (and `:sha`) to GHCR.
+2. SSH to the VPS, `git pull`, pull the new image, restart `app` + `scheduler`.
+
+Required GitHub repo secrets (Settings → Secrets → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `DEPLOY_HOST` | VPS public IP or hostname |
+| `DEPLOY_USER` | SSH user (e.g. `ubuntu`) |
+| `DEPLOY_SSH_KEY` | Private key authorized on the VPS |
+| `GHCR_TOKEN` | PAT or `gh` token with `read:packages` (for `docker pull` on the VPS) |
+
+Manual redeploy on the VPS:
+
+```bash
+cd /home/ubuntu/crawler
+GHCR_TOKEN=… ./docker/deploy.sh
+```
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
@@ -116,7 +139,7 @@ additive changes).
 | `POSTGRES_PASSWORD ... missing` | `docker/.env` doesn't exist — copy from `.env.example`. |
 | App 500s on every route | `DATABASE_URL` wrong, or `db` unhealthy — check `logs db`. |
 | Discover empty, scheduler quiet | `TINYFISH_API_KEY` unset (feed previews still work), or schedule paused in Discover preferences. |
-| Search misses obvious items | Run Rebuild index once (pgvector backfill), same as Workers. |
+| App pages 404 (not login) | No Cloudflare Access JWT reaching the app. Create a **Self-hosted** Access application for your hostname (Workers-type apps do not inject JWT to a VPS origin). Copy its AUD tag into `CF_ACCESS_AUD`, then recreate `app`. |
 
 ## Differences from Workers (by design)
 

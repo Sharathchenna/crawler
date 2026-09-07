@@ -237,10 +237,10 @@ export function ItemReader({ initialItem, initialHtml }: { initialItem: ReaderIt
       <p className="font-mono text-[11px] uppercase tracking-wide text-[var(--text-faint)]">
         {item.type} {item.sourceUrl && `· ${domainOf(item.sourceUrl)}`}
       </p>
-      <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.02em] text-[var(--text)]">{item.title}</h1>
+      <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[var(--text)] sm:text-[24px]">{item.title}</h1>
       {meta && <p className="mt-1 font-mono text-[11px] text-[var(--text-faint)]">{meta}</p>}
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <div className="mt-3 -mx-1 flex flex-wrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
         {item.sourceUrl && (
           <div role="tablist" aria-label="Reader or original" className="flex rounded-[6px] border border-[var(--border)] bg-[var(--bg-raised)] p-0.5">
             {(["reader", "original"] as const).map((v) => (
@@ -345,7 +345,7 @@ export function ItemReader({ initialItem, initialHtml }: { initialItem: ReaderIt
             src={item.sourceUrl}
             title={`Original webpage: ${item.title}`}
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            className="h-[70vh] w-full rounded-[10px] border border-[var(--border-soft)] bg-white"
+            className="h-[55vh] w-full rounded-[10px] border border-[var(--border-soft)] bg-white sm:h-[70vh]"
           />
         </div>
       ) : (
@@ -361,7 +361,10 @@ export function ItemReader({ initialItem, initialHtml }: { initialItem: ReaderIt
         <button
           onClick={saveHighlight}
           className="fixed z-40 rounded-[6px] bg-[var(--accent)] px-3 py-1.5 text-[12px] font-medium text-white shadow-lg hover:bg-[var(--accent-hi)]"
-          style={{ top: `${Math.max(selQuote.top - 44, 8)}px`, left: `${Math.max(selQuote.left, 8)}px` }}
+          style={{
+            top: `${Math.max(selQuote.top - 44, 8)}px`,
+            left: `${Math.min(Math.max(selQuote.left, 8), typeof window !== "undefined" ? window.innerWidth - 140 : selQuote.left)}px`,
+          }}
         >
           Save highlight
         </button>

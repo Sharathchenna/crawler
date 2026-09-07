@@ -152,12 +152,13 @@ export function ItemList({
       {items.map((it, idx) => (
         <li
           key={it.id}
-          className={`group flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--bg-hover)] ${
+          className={`group flex flex-col gap-2 px-3 py-2.5 hover:bg-[var(--bg-hover)] sm:flex-row sm:items-center sm:gap-3 ${
             idx !== items.length - 1 ? "border-b border-[var(--border-soft)]" : ""
           }`}
         >
-          <RowThumb item={it} />
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+            <RowThumb item={it} />
+            <div className="min-w-0 flex-1">
             <Link
               href={`/items/${it.id}`}
               className="block truncate text-[13px] font-medium tracking-[-0.01em] text-[var(--text)] hover:underline"
@@ -188,7 +189,8 @@ export function ItemList({
               <p className="mt-0.5 truncate text-[13px] text-[var(--text-muted)]">{it.excerpt}</p>
             )}
           </div>
-          <div className="flex shrink-0 gap-1 opacity-0 focus-within:opacity-100 group-hover:opacity-100">
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-1 pl-10 opacity-100 sm:pl-0 lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100">
             {it.status === "inbox" && (
               <button
                 onClick={() => setStatus(it.id, "saved")}

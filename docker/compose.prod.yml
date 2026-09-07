@@ -1,0 +1,21 @@
+# Production overlay: Traefik terminates TLS (Let's Encrypt via Cloudflare DNS).
+# Usage: docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d --build
+# Image: ghcr.io/sharathchenna/hoard:latest
+services:
+  app:
+    image: ghcr.io/sharathchenna/hoard:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.hoard.rule=Host(`crawler.sharathchenna.top`)
+      - traefik.http.routers.hoard.entrypoints=websecure
+      - traefik.http.routers.hoard.tls=true
+      - traefik.http.routers.hoard.tls.certresolver=letsencrypt
+      - traefik.http.services.hoard.loadbalancer.server.port=3000
+      - traefik.http.services.hoard.loadbalancer.passhostheader=true
+
+  scheduler:
+    image: ghcr.io/sharathchenna/hoard:latest
+
+  # Bundled nginx expects Cloudflare Origin CA certs; Traefik handles TLS here.
+  nginx:
+    profiles: ["with-nginx"]
