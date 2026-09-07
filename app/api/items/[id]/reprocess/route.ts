@@ -22,12 +22,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   try {
     const ex = await extractUrl(item.sourceUrl);
+    // Freshly rendered and cached so repeat visits skip Shiki.
+    const html = await renderMarkdownHtml(ex.markdown);
     const updated = await getDb().item.update({
       where: { id },
       data: {
         type: ex.type,
         title: ex.title,
         markdown: ex.markdown,
+        html,
         excerpt: ex.excerpt,
         author: ex.author ?? null,
         publishedAt: ex.publishedAt ? new Date(ex.publishedAt) : null,
@@ -35,8 +38,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         extractionError: null,
       },
     });
-    // Freshly rendered so the reader can swap HTML without refetching.
-    const html = await renderMarkdownHtml(updated.markdown);
     return NextResponse.json({ ...updated, reprocessed: true, html });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Couldn't read that page.";

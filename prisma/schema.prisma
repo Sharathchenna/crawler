@@ -40,6 +40,10 @@ model Item {
   markdown  String   @default("")
   excerpt   String   @default("")
   status    String   @default("inbox") // inbox|saved|archived|done
+  // Rendered reader HTML, cached at first view (or reprocess) so repeat
+  // visits skip Shiki entirely. Empty = render on demand. Cleared whenever
+  // the Markdown changes.
+  html      String   @default("")
   // Reader pipeline metadata (Defuddle extraction)
   author          String?
   publishedAt     DateTime?

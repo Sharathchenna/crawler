@@ -5,9 +5,10 @@
   "description": "Hoard — save anything as clean Markdown for humans and agents.",
   "type": "commonjs",
   "scripts": {
-    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql && wrangler d1 execute hoard --local --file=db/migrations/0004_discovery_schedule.sql && wrangler d1 execute hoard --local --file=db/migrations/0005_discovery_images.sql && wrangler d1 execute hoard --local --file=db/migrations/0006_discovery_slots.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
+    "setup": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0001_init.sql && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql && wrangler d1 execute hoard --local --file=db/migrations/0003_qmd_fts.sql && wrangler d1 execute hoard --local --file=db/migrations/0004_discovery_schedule.sql && wrangler d1 execute hoard --local --file=db/migrations/0005_discovery_images.sql && wrangler d1 execute hoard --local --file=db/migrations/0006_discovery_slots.sql && wrangler d1 execute hoard --local --file=db/migrations/0007_item_html.sql && wrangler d1 execute hoard --local --file=db/seed.sql",
     "db:discovery-images": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0005_discovery_images.sql",
     "db:discovery-slots": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0006_discovery_slots.sql",
+    "db:item-html": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0007_item_html.sql",
     "db:discovery": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0002_discovery.sql",
     "db:discovery-schedule": "prisma generate && wrangler d1 execute hoard --local --file=db/migrations/0004_discovery_schedule.sql",
     "discovery:deploy": "wrangler deploy --config wrangler.discovery.jsonc",

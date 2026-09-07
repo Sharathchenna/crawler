@@ -37,7 +37,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     where: { id },
     data: {
       ...(body.title !== undefined ? { title: body.title.slice(0, 300) } : {}),
-      ...(body.markdown !== undefined ? { markdown: body.markdown.slice(0, 200_000), excerpt: body.markdown.slice(0, 280) } : {}),
+      // New Markdown invalidates the cached render; the next view rebuilds it.
+      ...(body.markdown !== undefined ? { markdown: body.markdown.slice(0, 200_000), excerpt: body.markdown.slice(0, 280), html: "" } : {}),
       ...(body.status ? { status: body.status } : {}),
     },
   });

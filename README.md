@@ -47,6 +47,7 @@ wrangler d1 execute hoard --remote --file=db/migrations/0003_qmd_fts.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0004_discovery_schedule.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0005_discovery_images.sql
 wrangler d1 execute hoard --remote --file=db/migrations/0006_discovery_slots.sql
+wrangler d1 execute hoard --remote --file=db/migrations/0007_item_html.sql
 wrangler d1 execute hoard --remote --file=db/seed.sql
 # Existing DBs: 0002 and 0003 are additive — safe to apply on top.
 

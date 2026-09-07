@@ -16,7 +16,14 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
   });
   if (!item) notFound();
 
-  const html = await renderMarkdownHtml(item.markdown);
+  // Cached render: Shiki highlighting runs once per document version, not
+  // once per visit. A miss renders and persists for the next view.
+  let html = item.html;
+  if (!html) {
+    html = await renderMarkdownHtml(item.markdown);
+    // Best-effort cache fill; the page renders fine even if this loses a race.
+    await getDb().item.updateMany({ where: { id, html: "" }, data: { html } });
+  }
 
   return (
     <ItemReader
